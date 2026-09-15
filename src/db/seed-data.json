@@ -1,0 +1,416 @@
+{
+  "_origen": "Asistencia Ciudad Activa.xlsx",
+  "_nota": "Catalogos completos + primeros 10 registros de cada hoja.",
+  "profesores": [
+    {
+      "etiqueta": "Coordinador Adolfo Steimberg",
+      "nombre": "Adolfo Steimberg",
+      "cargo": "Coordinador",
+      "email": "profesteimberg@gmail.com",
+      "usuario": "steimberga"
+    },
+    {
+      "etiqueta": "Noelia Sierra",
+      "nombre": "Noelia Sierra",
+      "cargo": "Profesor",
+      "email": "noelsierra270@gmail.com",
+      "usuario": "sierran"
+    },
+    {
+      "etiqueta": "Prof. Augusto Cañete",
+      "nombre": "Augusto Cañete",
+      "cargo": "Profesor",
+      "email": "augustoca2010@hotmail.com",
+      "usuario": "canetea"
+    },
+    {
+      "etiqueta": "Prof. Barrera Tomas",
+      "nombre": "Barrera Tomas",
+      "cargo": "Profesor",
+      "email": "ovabarrera@gmail.com",
+      "usuario": "tomasb"
+    },
+    {
+      "etiqueta": "Prof. Carrizo Eugenia",
+      "nombre": "Carrizo Eugenia",
+      "cargo": "Profesor",
+      "email": "maeucarrizo@gmail.com",
+      "usuario": "eugeniac"
+    },
+    {
+      "etiqueta": "Prof. Claudia López",
+      "nombre": "Claudia López",
+      "cargo": "Profesor",
+      "email": "clau4942330@gmail.com",
+      "usuario": "lopezc"
+    },
+    {
+      "etiqueta": "Prof. Gustavo Toledo",
+      "nombre": "Gustavo Toledo",
+      "cargo": "Profesor",
+      "email": "tntmar_85@hotmail.com",
+      "usuario": "toledog"
+    },
+    {
+      "etiqueta": "Prof. Juarez Jessica",
+      "nombre": "Juarez Jessica",
+      "cargo": "Profesor",
+      "email": "juarezjessica924@gmail.com",
+      "usuario": "jessicaj"
+    },
+    {
+      "etiqueta": "Prof. Nicolás Suaya",
+      "nombre": "Nicolás Suaya",
+      "cargo": "Profesor",
+      "email": "suayanicolas@gmail.com",
+      "usuario": "suayan"
+    },
+    {
+      "etiqueta": "Prof. Rodriguez Karen",
+      "nombre": "Rodriguez Karen",
+      "cargo": "Profesor",
+      "email": "karenkanoroludmi@gmail.com",
+      "usuario": "karenr"
+    },
+    {
+      "etiqueta": "Prof. Rojas David",
+      "nombre": "Rojas David",
+      "cargo": "Profesor",
+      "email": "deivid.tucson@gmail.com",
+      "usuario": "davidr"
+    }
+  ],
+  "lugares": [
+    {
+      "nombre": "Plaza Urquiza",
+      "registros_historicos": 290
+    },
+    {
+      "nombre": "Parque 9 de Julio",
+      "registros_historicos": 236
+    },
+    {
+      "nombre": "Plaza San Martin",
+      "registros_historicos": 137
+    },
+    {
+      "nombre": "Parque Avellaneda",
+      "registros_historicos": 131
+    },
+    {
+      "nombre": "Barrio Kennedy",
+      "registros_historicos": 61
+    },
+    {
+      "nombre": "Plaza Sortheix",
+      "registros_historicos": 59
+    },
+    {
+      "nombre": "Pista de Ciclismo",
+      "registros_historicos": 30
+    },
+    {
+      "nombre": "Plaza Villa Lujan",
+      "registros_historicos": 8
+    },
+    {
+      "nombre": "Barrio Benjamin Matienzo",
+      "registros_historicos": 6
+    },
+    {
+      "nombre": "Manantial Sur",
+      "registros_historicos": 6
+    },
+    {
+      "nombre": "Plaza Los Plátanos",
+      "registros_historicos": 2
+    }
+  ],
+  "estados_clase": [
+    "Clase normal",
+    "Suspendida por factores climaticos",
+    "Suspendida por feriado"
+  ],
+  "registros": [
+    {
+      "origen": "Respuestas de formulario",
+      "marca_temporal": "2026-09-08 19:56:04",
+      "email_responsable": "suayanicolas@gmail.com",
+      "profesor": "Prof. Nicolás Suaya",
+      "fecha": "2026-09-08",
+      "lugar": "Plaza San Martin",
+      "alumnos_total": 90,
+      "alumnos_nuevos": 10,
+      "varones": 4,
+      "mujeres": 86,
+      "estado_clase": "Clase normal",
+      "observaciones": ""
+    },
+    {
+      "origen": "Respuestas de formulario",
+      "marca_temporal": "2026-09-08 20:11:04",
+      "email_responsable": "maeucarrizo@gmail.com",
+      "profesor": "Prof. Carrizo Eugenia",
+      "fecha": "2026-09-08",
+      "lugar": "Barrio Kennedy",
+      "alumnos_total": 17,
+      "alumnos_nuevos": 0,
+      "varones": 2,
+      "mujeres": 15,
+      "estado_clase": "Clase normal",
+      "observaciones": ""
+    },
+    {
+      "origen": "Respuestas de formulario",
+      "marca_temporal": "2026-09-09 01:42:34",
+      "email_responsable": "profesteimberg@gmail.com",
+      "profesor": "Coordinador Adolfo Steimberg",
+      "fecha": "2026-09-08",
+      "lugar": "Barrio Benjamin Matienzo",
+      "alumnos_total": 17,
+      "alumnos_nuevos": 0,
+      "varones": 0,
+      "mujeres": 17,
+      "estado_clase": "Clase normal",
+      "observaciones": "Se siguen sumando"
+    },
+    {
+      "origen": "Respuestas de formulario",
+      "marca_temporal": "2026-09-09 08:04:59",
+      "email_responsable": "juarezjessica924@gmail.com",
+      "profesor": "Prof. Juarez Jessica",
+      "fecha": "2026-09-08",
+      "lugar": "Pista de Ciclismo",
+      "alumnos_total": 30,
+      "alumnos_nuevos": 7,
+      "varones": 0,
+      "mujeres": 30,
+      "estado_clase": "Clase normal",
+      "observaciones": "Clase normal y dinámica con buena participación de la gente"
+    },
+    {
+      "origen": "Respuestas de formulario",
+      "marca_temporal": "2026-09-07 20:23:58",
+      "email_responsable": "maeucarrizo@gmail.com",
+      "profesor": "Prof. Carrizo Eugenia",
+      "fecha": "2026-09-07",
+      "lugar": "Plaza Sortheix",
+      "alumnos_total": 35,
+      "alumnos_nuevos": 0,
+      "varones": 0,
+      "mujeres": 35,
+      "estado_clase": "Clase normal",
+      "observaciones": ""
+    },
+    {
+      "origen": "Respuestas de formulario",
+      "marca_temporal": "2026-09-08 06:40:02",
+      "email_responsable": "karenkanoroludmi@gmail.com",
+      "profesor": "Prof. Rodriguez Karen",
+      "fecha": "2026-09-07",
+      "lugar": "Plaza Urquiza",
+      "alumnos_total": 58,
+      "alumnos_nuevos": 0,
+      "varones": 4,
+      "mujeres": 54,
+      "estado_clase": "Clase normal",
+      "observaciones": ""
+    },
+    {
+      "origen": "Respuestas de formulario",
+      "marca_temporal": "2026-09-04 21:20:26",
+      "email_responsable": "maeucarrizo@gmail.com",
+      "profesor": "Prof. Carrizo Eugenia",
+      "fecha": "2026-09-04",
+      "lugar": "Parque 9 de Julio",
+      "alumnos_total": 60,
+      "alumnos_nuevos": 0,
+      "varones": 0,
+      "mujeres": 60,
+      "estado_clase": "Clase normal",
+      "observaciones": "Clase normal."
+    },
+    {
+      "origen": "Respuestas de formulario",
+      "marca_temporal": "2026-09-03 20:18:42",
+      "email_responsable": "maeucarrizo@gmail.com",
+      "profesor": "Prof. Carrizo Eugenia",
+      "fecha": "2026-09-03",
+      "lugar": "Barrio Kennedy",
+      "alumnos_total": 15,
+      "alumnos_nuevos": 0,
+      "varones": 1,
+      "mujeres": 14,
+      "estado_clase": "Clase normal",
+      "observaciones": ""
+    },
+    {
+      "origen": "Respuestas de formulario",
+      "marca_temporal": "2026-09-02 17:51:40",
+      "email_responsable": "juarezjessica924@gmail.com",
+      "profesor": "Prof. Juarez Jessica",
+      "fecha": "2026-09-02",
+      "lugar": "Barrio Benjamin Matienzo",
+      "alumnos_total": 13,
+      "alumnos_nuevos": 3,
+      "varones": 0,
+      "mujeres": 13,
+      "estado_clase": "Clase normal",
+      "observaciones": "Clase normal y dinámica con buena participación de la gente"
+    },
+    {
+      "origen": "Respuestas de formulario",
+      "marca_temporal": "2026-09-02 20:09:19",
+      "email_responsable": "maeucarrizo@gmail.com",
+      "profesor": "Prof. Carrizo Eugenia",
+      "fecha": "2026-09-02",
+      "lugar": "Plaza Sortheix",
+      "alumnos_total": 35,
+      "alumnos_nuevos": 1,
+      "varones": 0,
+      "mujeres": 35,
+      "estado_clase": "Clase normal",
+      "observaciones": ""
+    },
+    {
+      "origen": "BD",
+      "marca_temporal": "2026-05-26 20:07:54",
+      "email_responsable": "maeucarrizo@gmail.com",
+      "profesor": "Prof. Carrizo Eugenia",
+      "fecha": "2026-05-26",
+      "lugar": "Barrio Kennedy",
+      "alumnos_total": 15,
+      "alumnos_nuevos": 1,
+      "varones": 2,
+      "mujeres": 13,
+      "estado_clase": "Clase normal",
+      "observaciones": ""
+    },
+    {
+      "origen": "BD",
+      "marca_temporal": "2026-05-26 20:53:17",
+      "email_responsable": "ovabarrera@gmail.com",
+      "profesor": "Prof. Juarez Jessica",
+      "fecha": "2026-05-26",
+      "lugar": "Parque Avellaneda",
+      "alumnos_total": 54,
+      "alumnos_nuevos": 4,
+      "varones": 3,
+      "mujeres": 51,
+      "estado_clase": "Clase normal",
+      "observaciones": "Hermosa clase"
+    },
+    {
+      "origen": "BD",
+      "marca_temporal": "2026-05-27 00:07:46",
+      "email_responsable": "suayanicolas@gmail.com",
+      "profesor": "Prof. Nicolás Suaya",
+      "fecha": "2026-05-26",
+      "lugar": "Pista de Ciclismo",
+      "alumnos_total": 25,
+      "alumnos_nuevos": 5,
+      "varones": 0,
+      "mujeres": 25,
+      "estado_clase": "Clase normal",
+      "observaciones": ""
+    },
+    {
+      "origen": "BD",
+      "marca_temporal": "2026-05-27 00:17:44",
+      "email_responsable": "deivid.tucson@gmail.com",
+      "profesor": "Prof. Rojas David",
+      "fecha": "2026-05-26",
+      "lugar": "Plaza San Martin",
+      "alumnos_total": 63,
+      "alumnos_nuevos": 1,
+      "varones": 1,
+      "mujeres": 62,
+      "estado_clase": "Clase normal",
+      "observaciones": "Buen clima"
+    },
+    {
+      "origen": "BD",
+      "marca_temporal": "2026-05-22 20:02:06",
+      "email_responsable": "augustoca2010@hotmail.com",
+      "profesor": "Prof. Augusto Cañete",
+      "fecha": "2026-05-22",
+      "lugar": "Plaza Urquiza",
+      "alumnos_total": 77,
+      "alumnos_nuevos": 0,
+      "varones": 0,
+      "mujeres": 77,
+      "estado_clase": "Clase normal",
+      "observaciones": ""
+    },
+    {
+      "origen": "BD",
+      "marca_temporal": "2026-05-22 21:33:16",
+      "email_responsable": "profesteimberg@gmail.com",
+      "profesor": "Coordinador Adolfo Steimberg",
+      "fecha": "2026-05-22",
+      "lugar": "Pista de Ciclismo",
+      "alumnos_total": 20,
+      "alumnos_nuevos": 0,
+      "varones": 0,
+      "mujeres": 20,
+      "estado_clase": "Clase normal",
+      "observaciones": "Mucho frío. Ese día se suspendió en parque 9 de julio"
+    },
+    {
+      "origen": "BD",
+      "marca_temporal": "2026-05-21 20:10:34",
+      "email_responsable": "augustoca2010@hotmail.com",
+      "profesor": "Prof. Augusto Cañete",
+      "fecha": "2026-05-21",
+      "lugar": "Plaza San Martin",
+      "alumnos_total": 53,
+      "alumnos_nuevos": 0,
+      "varones": 1,
+      "mujeres": 52,
+      "estado_clase": "Clase normal",
+      "observaciones": ""
+    },
+    {
+      "origen": "BD",
+      "marca_temporal": "2026-05-21 20:16:24",
+      "email_responsable": "maeucarrizo@gmail.com",
+      "profesor": "Prof. Carrizo Eugenia",
+      "fecha": "2026-05-21",
+      "lugar": "Barrio Kennedy",
+      "alumnos_total": 12,
+      "alumnos_nuevos": 0,
+      "varones": 1,
+      "mujeres": 11,
+      "estado_clase": "Clase normal",
+      "observaciones": "Clase normal."
+    },
+    {
+      "origen": "BD",
+      "marca_temporal": "2026-05-21 20:19:04",
+      "email_responsable": "juarezjessica924@gmail.com",
+      "profesor": "Prof. Juarez Jessica",
+      "fecha": "2026-05-21",
+      "lugar": "Parque Avellaneda",
+      "alumnos_total": 51,
+      "alumnos_nuevos": 1,
+      "varones": 1,
+      "mujeres": 50,
+      "estado_clase": "Clase normal",
+      "observaciones": "Clase dinámica"
+    },
+    {
+      "origen": "BD",
+      "marca_temporal": "2026-05-20 19:42:28",
+      "email_responsable": "augustoca2010@hotmail.com",
+      "profesor": "Prof. Augusto Cañete",
+      "fecha": "2026-05-20",
+      "lugar": "Plaza Sortheix",
+      "alumnos_total": 36,
+      "alumnos_nuevos": 2,
+      "varones": 1,
+      "mujeres": 35,
+      "estado_clase": "Clase normal",
+      "observaciones": ""
+    }
+  ]
+}

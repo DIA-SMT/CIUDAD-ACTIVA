@@ -1,0 +1,17 @@
+{
+  "name": "ciudad-activa",
+  "version": "1.0.0",
+  "description": "Sistema de registro de actividades del programa Ciudad Activa - Direccion de Deportes y Recreacion, Municipalidad de San Miguel de Tucuman",
+  "type": "module",
+  "engines": { "node": ">=22.5.0" },
+  "scripts": {
+    "start": "node --no-warnings src/server.js",
+    "dev": "node --no-warnings --watch src/server.js",
+    "init-db": "node --no-warnings src/db/seed.js",
+    "reset-db": "node --no-warnings src/db/seed.js --reset",
+    "test": "node --no-warnings --test tests/*.test.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
