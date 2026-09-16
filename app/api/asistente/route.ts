@@ -1,5 +1,8 @@
 // Asistente del panel: responde preguntas sobre el programa en lenguaje natural.
 //
+// Va contra OpenRouter, que expone una API compatible con la de OpenAI. El
+// modelo se elige con OPENROUTER_MODEL, asi que cambiarlo no toca el codigo.
+//
 // El modelo no consulta la base directamente ni escribe SQL: elige entre las
 // herramientas de ./herramientas.ts, que son las mismas funciones que alimentan
 // el tablero. Por eso una respuesta del asistente nunca puede contradecir un
@@ -9,21 +12,21 @@
 // del que van a salir informes, saber de donde sale cada numero importa tanto
 // como el numero.
 
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { error } from '@/lib/consultas';
 import { hoyISO } from '@/lib/fechas';
 import { clienteServidor, sesionActual } from '@/lib/supabase/servidor';
 import type { EstadoClase, Lugar, ProfesorOpcion } from '@/lib/tipos';
 import {
-  HERRAMIENTAS, filtrosDeHerramienta, parametrosDeIndicador,
+  HERRAMIENTAS, argumentosDe, filtrosDeHerramienta, parametrosDeIndicador,
 } from './herramientas';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-const MODELO = 'claude-opus-5';
+const MODELO_POR_DEFECTO = 'openai/gpt-4o-mini';
 /** Tope de idas y vueltas con herramientas, por si una pregunta se enrosca. */
-const MAX_PASOS = 8;
+const MAX_PASOS = 6;
 const MAX_MENSAJES = 24;
 
 interface Consulta {
@@ -59,17 +62,26 @@ Definiciones que tenés que respetar, son las mismas que usa el tablero:
 
 CÓMO RESPONDER
 - Nunca inventes ni estimes un número. Si no lo trajiste con una herramienta, no lo digas.
-- Antes de responder cualquier cosa con cifras, consultá. Aunque parezca que ya lo sabés.
+- Antes de responder cualquier cosa con cifras, consultá. Aunque creas que ya lo sabés.
 - Si la pregunta no aclara el período, usá todo el histórico y decí qué período tomaste.
 - Contestá corto y directo, en español rioplatense. Primero el número que te pidieron,
   después el contexto si aporta. Sin preámbulos del tipo "según los datos consultados".
-- Si un dato llama la atención, decilo. Ejemplo: si un espacio no tiene clases hace meses,
-  o si un profesor tiene muchas suspensiones, mencionalo aunque no te lo hayan preguntado.
+- Si un dato llama la atención, decilo. Por ejemplo: si un espacio no tiene clases hace
+  meses, o si un profesor tiene muchas suspensiones, mencionalo aunque no lo pregunten.
 - Si la pregunta es ambigua, elegí la interpretación más razonable, respondé, y aclará en
   una línea qué interpretaste. No devuelvas la pregunta sin responder nada.
-- Si lo que te piden no se puede saber con estos datos, decilo derecho y explicá qué falta.
+- Si lo que piden no se puede saber con estos datos, decilo derecho y explicá qué falta.
 - Para porcentajes y promedios usá los que ya vienen calculados, no los recalcules.
+- Escribí los números como se escriben acá: coma decimal y punto de miles (40,6 y 1.250).
 - Usá tablas de markdown cuando compares varias filas; para un dato suelto, una frase.
+
+OJO CON LO QUE NO APARECE
+"por_lugar" y "por_profesor" sólo devuelven los que tuvieron al menos una clase en el
+período consultado. Un espacio sin ninguna clase no viene en la lista: no es que tenga
+cero, es que no está. Si te preguntan qué espacios o qué profesores no tuvieron
+actividad, compará lo que devuelve la herramienta contra las listas completas de acá
+abajo y respondé con los que faltan. Nunca digas que todos tuvieron actividad sin
+haber hecho esa comparación.
 
 PROFESORES (usá el id, no el nombre, cuando filtres)
 ${catalogos.profesores.map((p) => `- ${p.nombre} → ${p.id}`).join('\n')}
@@ -88,9 +100,10 @@ export async function POST(pedido: Request): Promise<Response> {
     return error('El asistente está disponible para los administradores del programa.', 403);
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  const clave = process.env.OPENROUTER_API_KEY;
+  if (!clave) {
     return error(
-      'El asistente no está configurado: falta ANTHROPIC_API_KEY en el servidor. ' +
+      'El asistente no está configurado: falta OPENROUTER_API_KEY en el servidor. ' +
       'El resto del panel funciona normalmente.',
       503,
     );
@@ -111,7 +124,7 @@ export async function POST(pedido: Request): Promise<Response> {
 
   const supabase = await clienteServidor();
 
-  // Los catalogos van en el system prompt: el modelo necesita los ids para
+  // Los catalogos van en las instrucciones: el modelo necesita los ids para
   // filtrar, y asi se ahorra una llamada de herramienta en cada conversacion.
   const [profesores, lugares, estados] = await Promise.all([
     supabase.from('perfiles').select('id, nombre, cargo, email')
@@ -125,81 +138,90 @@ export async function POST(pedido: Request): Promise<Response> {
       .returns<Pick<EstadoClase, 'codigo' | 'nombre'>[]>(),
   ]);
 
-  const sistema = instrucciones(sesion.perfil, {
-    profesores: profesores.data ?? [],
-    lugares: lugares.data ?? [],
-    estados: estados.data ?? [],
+  const cliente = new OpenAI({
+    apiKey: clave,
+    baseURL: 'https://openrouter.ai/api/v1',
+    // OpenRouter usa estas cabeceras para atribuir el consumo a la aplicacion.
+    defaultHeaders: {
+      'HTTP-Referer': process.env.NEXT_PUBLIC_SITIO_URL ?? 'http://localhost:3000',
+      'X-Title': 'Ciudad Activa',
+    },
   });
 
-  const anthropic = new Anthropic();
-  const mensajes: Anthropic.MessageParam[] = entrantes.map((m) => ({
-    role: m.rol === 'asistente' ? 'assistant' : 'user',
-    content: m.texto,
-  }));
+  const modelo = process.env.OPENROUTER_MODEL?.trim() || MODELO_POR_DEFECTO;
+
+  const mensajes: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+    {
+      role: 'system',
+      content: instrucciones(sesion.perfil, {
+        profesores: profesores.data ?? [],
+        lugares: lugares.data ?? [],
+        estados: estados.data ?? [],
+      }),
+    },
+    ...entrantes.map((m) => ({
+      role: (m.rol === 'asistente' ? 'assistant' : 'user') as 'assistant' | 'user',
+      content: m.texto,
+    })),
+  ];
 
   const consultas: Consulta[] = [];
 
   try {
     for (let paso = 0; paso < MAX_PASOS; paso += 1) {
-      const respuesta = await anthropic.messages.create({
-        model: MODELO,
-        max_tokens: 4096,
-        thinking: { type: 'adaptive' },
-        output_config: { effort: 'medium' },
-        system: [{ type: 'text', text: sistema, cache_control: { type: 'ephemeral' } }],
-        tools: HERRAMIENTAS,
+      const respuesta = await cliente.chat.completions.create({
+        model: modelo,
         messages: mensajes,
+        tools: HERRAMIENTAS,
+        // Determinista: la misma pregunta sobre los mismos datos tiene que dar
+        // la misma respuesta. Es un sistema del que salen informes.
+        temperature: 0,
+        max_tokens: 2048,
       });
 
-      if (respuesta.stop_reason === 'refusal') {
-        return Response.json({
-          texto: 'No puedo responder eso. Probá con una pregunta sobre las clases del programa.',
-          consultas,
-        });
+      const eleccion = respuesta.choices[0]?.message;
+      if (!eleccion) {
+        return error('El asistente no devolvió una respuesta.', 502);
       }
 
-      if (respuesta.stop_reason !== 'tool_use') {
-        const texto = respuesta.content
-          .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-          .map((b) => b.text)
-          .join('\n')
-          .trim();
+      const llamadas = eleccion.tool_calls ?? [];
 
+      if (llamadas.length === 0) {
+        const texto = (eleccion.content ?? '').trim();
         return Response.json({
           texto: texto || 'No pude armar una respuesta. Probá preguntarlo de otra forma.',
           consultas,
+          modelo,
         });
       }
 
-      mensajes.push({ role: 'assistant', content: respuesta.content });
+      mensajes.push(eleccion);
 
-      // Las llamadas de una misma respuesta van juntas y vuelven en un solo
-      // mensaje: partirlas hace que el modelo deje de pedirlas en paralelo.
-      const pedidos = respuesta.content.filter(
-        (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use',
-      );
-
+      // Las llamadas de una misma respuesta se resuelven juntas; cada resultado
+      // vuelve como un mensaje 'tool' con el id de su llamada.
       const resultados = await Promise.all(
-        pedidos.map(async (llamada): Promise<Anthropic.ToolResultBlockParam> => {
-          const entrada = (llamada.input ?? {}) as Record<string, unknown>;
+        llamadas.map(async (llamada) => {
+          if (llamada.type !== 'function') {
+            return { tool_call_id: llamada.id, contenido: 'Tipo de llamada no soportado.' };
+          }
+
+          const nombre = llamada.function.name;
+          const entrada = argumentosDe(llamada.function.arguments);
+
           try {
-            if (llamada.name === 'consultar_indicadores') {
+            if (nombre === 'consultar_indicadores') {
               const { funcion, parametros } = parametrosDeIndicador(entrada);
               const { data, error: fallo } = await supabase.rpc(funcion, parametros);
               if (fallo) throw new Error(fallo.message);
 
               consultas.push({
-                herramienta: String(entrada.indicador),
+                herramienta: String(entrada.indicador ?? 'resumen'),
                 detalle: describir(entrada),
               });
-              return {
-                type: 'tool_result',
-                tool_use_id: llamada.id,
-                content: JSON.stringify(data ?? {}),
-              };
+              return { tool_call_id: llamada.id, contenido: JSON.stringify(data ?? {}) };
             }
 
-            if (llamada.name === 'listar_clases') {
+            if (nombre === 'listar_clases') {
               const f = filtrosDeHerramienta(entrada);
               const limite = Math.min(50, Math.max(1, Number(entrada.limite) || 10));
               const orden = String(entrada.orden ?? 'fecha_desc');
@@ -231,39 +253,42 @@ export async function POST(pedido: Request): Promise<Response> {
               if (fallo) throw new Error(fallo.message);
 
               consultas.push({ herramienta: 'clases', detalle: describir(entrada) });
-              return {
-                type: 'tool_result',
-                tool_use_id: llamada.id,
-                content: JSON.stringify(data ?? []),
-              };
+              return { tool_call_id: llamada.id, contenido: JSON.stringify(data ?? []) };
             }
 
-            throw new Error(`Herramienta desconocida: ${llamada.name}`);
+            throw new Error(`Herramienta desconocida: ${nombre}`);
           } catch (e) {
             // El error vuelve al modelo para que reformule, no rompe la respuesta.
             return {
-              type: 'tool_result',
-              tool_use_id: llamada.id,
-              content: `No se pudo consultar: ${e instanceof Error ? e.message : 'error'}`,
-              is_error: true,
+              tool_call_id: llamada.id,
+              contenido: `No se pudo consultar: ${e instanceof Error ? e.message : 'error'}`,
             };
           }
         }),
       );
 
-      mensajes.push({ role: 'user', content: resultados });
+      for (const r of resultados) {
+        mensajes.push({ role: 'tool', tool_call_id: r.tool_call_id, content: r.contenido });
+      }
     }
 
     return Response.json({
       texto: 'La consulta se hizo muy larga. Probá acotarla, por ejemplo a un período o a un lugar.',
       consultas,
+      modelo,
     });
   } catch (e) {
-    if (e instanceof Anthropic.AuthenticationError) {
-      return error('La clave del asistente no es válida. Revisá ANTHROPIC_API_KEY.', 503);
+    if (e instanceof OpenAI.AuthenticationError) {
+      return error('La clave de OpenRouter no es válida. Revisá OPENROUTER_API_KEY.', 503);
     }
-    if (e instanceof Anthropic.RateLimitError) {
-      return error('El asistente está saturado. Esperá unos segundos y volvé a preguntar.', 429);
+    if (e instanceof OpenAI.RateLimitError) {
+      return error('El asistente está saturado o sin crédito. Probá en unos minutos.', 429);
+    }
+    if (e instanceof OpenAI.NotFoundError) {
+      return error(
+        `OpenRouter no reconoce el modelo «${modelo}». Revisá OPENROUTER_MODEL.`,
+        503,
+      );
     }
     console.error('[asistente]', e);
     return error('El asistente no pudo responder. Intentá de nuevo.', 500);

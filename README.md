@@ -37,9 +37,11 @@ de Supabase, en *Project Settings*:
 | `SUPABASE_SERVICE_ROLE_KEY` | API | **secreta**, saltea RLS; sólo para alta de usuarios y reseteo de contraseñas |
 | `DATABASE_URL` | Database | conexión directa, para migraciones y carga inicial |
 | `PASSWORD_INICIAL` | — | contraseña que se asigna en la carga inicial |
-| `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com) | asistente del panel; **opcional** |
+| `OPENROUTER_API_KEY` | [openrouter.ai/keys](https://openrouter.ai/keys) | asistente del panel; **opcional** |
+| `OPENROUTER_MODEL` | `openai/gpt-4o-mini` | modelo del asistente |
+| `NEXT_PUBLIC_SITIO_URL` | `http://localhost:3000` | URL pública, para la atribución en OpenRouter |
 
-Sin `ANTHROPIC_API_KEY` el sistema funciona completo: sólo la pestaña Asistente
+Sin `OPENROUTER_API_KEY` el sistema funciona completo: sólo la pestaña Asistente
 avisa que no está configurada.
 
 ### El asistente del panel
@@ -47,6 +49,9 @@ avisa que no está configurada.
 Los administradores tienen una pestaña donde preguntar en castellano: *"¿qué
 profesor dio más clases?"*, *"¿cuántas se suspendieron por lluvia y en qué
 plazas?"*, *"¿cómo viene este mes contra el anterior?"*.
+
+Va contra **OpenRouter**, así que el modelo se cambia con `OPENROUTER_MODEL` sin
+tocar una línea de código. Sirve cualquiera que soporte *function calling*.
 
 **No escribe SQL ni consulta la base por su cuenta.** Elige entre las mismas
 funciones que alimentan el tablero, con los mismos filtros. Eso importa por tres
