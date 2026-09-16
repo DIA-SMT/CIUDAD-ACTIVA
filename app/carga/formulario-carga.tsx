@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Check, Loader2, TriangleAlert, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -87,8 +87,6 @@ export function FormularioCarga({
 
   const formulario = useRef<HTMLFormElement>(null);
   const primerCampo = useRef<HTMLInputElement>(null);
-
-  useEffect(() => setDatos(inicial), [inicial]);
 
   const estado = catalogos.estados.find((e) => e.codigo === datos.estado_codigo);
   const suspendida = Boolean(estado?.es_suspension);

@@ -39,6 +39,9 @@ export function PantallaCarga({
         </CardHeader>
         <CardContent>
           <FormularioCarga
+            // Remonta el formulario al pasar de alta a edicion: el estado
+            // arranca del registro correcto sin sincronizarlo con un efecto.
+            key={editando?.id ?? 'nuevo'}
             perfil={perfil}
             catalogos={catalogos}
             editando={editando}

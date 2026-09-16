@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, XAxis, YAxis,
 } from 'recharts';
@@ -17,6 +17,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { fmt } from '@/lib/fechas';
+import { traerJSON, useRecurso } from '@/lib/usar-recurso';
 import type {
   Agrupacion, FilaLugar, FilaProfesor, Tablero as DatosTablero,
 } from '@/lib/tipos';
@@ -93,12 +94,14 @@ function Ordenable({
 }) {
   const activa = orden.columna === campo;
   return (
-    <TableHead className={numerica ? 'text-right' : undefined}>
+    <TableHead
+      className={numerica ? 'text-right' : undefined}
+      aria-sort={activa ? (orden.asc ? 'ascending' : 'descending') : 'none'}
+    >
       <button
         type="button"
         onClick={() => alternar(campo)}
         className="hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 rounded focus-visible:ring-2 focus-visible:outline-none"
-        aria-sort={activa ? (orden.asc ? 'ascending' : 'descending') : 'none'}
       >
         {children}
         <span aria-hidden className={activa ? '' : 'opacity-0'}>
@@ -112,27 +115,17 @@ function Ordenable({
 export function Tablero() {
   const { consulta } = useFiltros();
   const [agrupar, setAgrupar] = useState<Agrupacion>('mes');
-  const [datos, setDatos] = useState<DatosTablero | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let vigente = true;
-    setDatos(null);
-    setError(null);
-
-    fetch(`/api/estadisticas/tablero?${consulta}&agrupar=${agrupar}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
-      .then((d: DatosTablero) => vigente && setDatos(d))
-      .catch(() => vigente && setError('No se pudieron cargar los indicadores.'));
-
-    return () => { vigente = false; };
-  }, [consulta, agrupar]);
+  const ruta = `/api/estadisticas/tablero?${consulta}&agrupar=${agrupar}`;
+  const { datos, error } = useRecurso(ruta, () => traerJSON<DatosTablero>(ruta));
 
   const lugares = useOrden<FilaLugar>('alumnos');
   const profesores = useOrden<FilaProfesor>('alumnos');
 
   if (error) {
-    return <p className="text-rojo-600 py-10 text-center text-sm">{error}</p>;
+    return <p className="text-rojo-600 py-10 text-center text-sm">
+      No se pudieron cargar los indicadores.
+    </p>;
   }
 
   if (!datos) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Check, Copy, KeyRound, Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { fmt } from '@/lib/fechas';
+import { traerJSON, useRecurso } from '@/lib/usar-recurso';
 import type { EntradaHistorial, Lugar, Pagina, Perfil } from '@/lib/tipos';
 
 /** Lo que agrega /api/admin/usuarios sobre el perfil. */
@@ -85,20 +86,16 @@ function ClaveGenerada({
 const NUEVO = { nombre: '', cargo: 'Profesor', email: '', rol: 'profesor', dicta_clases: true };
 
 function Profesores({ perfil }: { perfil: Perfil }) {
-  const [usuarios, setUsuarios] = useState<UsuarioAdmin[] | null>(null);
   const [alta, setAlta] = useState(false);
   const [datos, setDatos] = useState(NUEVO);
   const [guardando, setGuardando] = useState(false);
   const [clave, setClave] = useState<{ clave: string; nombre: string } | null>(null);
 
-  const traer = useCallback(async () => {
-    const r = await fetch('/api/admin/usuarios');
-    if (!r.ok) { setUsuarios([]); return; }
-    const d = await r.json();
-    setUsuarios(d.usuarios ?? []);
-  }, []);
-
-  useEffect(() => { void traer(); }, [traer]);
+  const { datos: listado, refrescar: traer } = useRecurso(
+    '/api/admin/usuarios',
+    () => traerJSON<{ usuarios: UsuarioAdmin[] }>('/api/admin/usuarios'),
+  );
+  const usuarios = listado?.usuarios ?? null;
 
   async function crear() {
     setGuardando(true);
@@ -332,18 +329,14 @@ function Profesores({ perfil }: { perfil: Perfil }) {
 // ---------------------------------------------------------------------------
 
 function Lugares() {
-  const [lugares, setLugares] = useState<Lugar[] | null>(null);
   const [nombre, setNombre] = useState('');
   const [guardando, setGuardando] = useState(false);
 
-  const traer = useCallback(async () => {
-    const r = await fetch('/api/admin/lugares');
-    if (!r.ok) { setLugares([]); return; }
-    const d = await r.json();
-    setLugares(d.lugares ?? []);
-  }, []);
-
-  useEffect(() => { void traer(); }, [traer]);
+  const { datos: listado, refrescar: traer } = useRecurso(
+    '/api/admin/lugares',
+    () => traerJSON<{ lugares: Lugar[] }>('/api/admin/lugares'),
+  );
+  const lugares = listado?.lugares ?? null;
 
   async function crear() {
     if (!nombre.trim()) return;
@@ -444,18 +437,15 @@ function Lugares() {
 
 function Auditoria() {
   const [pagina, setPagina] = useState(1);
-  const [datos, setDatos] = useState<Pagina<EntradaHistorial> | null>(null);
 
-  useEffect(() => {
-    let vigente = true;
-    setDatos(null);
-    fetch(`/api/admin/historial?pagina=${pagina}&por_pagina=30`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
-      .then((d) => vigente && setDatos(d))
-      .catch(() => vigente && setDatos({ datos: [], total: 0, pagina: 1, por_pagina: 30, paginas: 1 }));
-    return () => { vigente = false; };
-  }, [pagina]);
+  const ruta = `/api/admin/historial?pagina=${pagina}&por_pagina=30`;
+  const { datos, error } = useRecurso(ruta, () => traerJSON<Pagina<EntradaHistorial>>(ruta));
 
+  if (error) {
+    return <p className="text-rojo-600 py-8 text-center text-sm">
+      No se pudo cargar la auditoría.
+    </p>;
+  }
   if (!datos) return <Skeleton className="h-64 w-full" />;
 
   return (

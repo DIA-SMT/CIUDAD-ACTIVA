@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Download, Eye, Loader2, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/table';
 import { FormularioCarga } from '@/app/carga/formulario-carga';
 import { fmt } from '@/lib/fechas';
+import { traerJSON, useRecurso } from '@/lib/usar-recurso';
 import type {
   Catalogos, EntradaHistorial, Pagina, Perfil, Registro,
 } from '@/lib/tipos';
@@ -36,9 +37,9 @@ export function Registros({
   const { consulta } = useFiltros();
   const esAdmin = perfil.rol === 'admin';
 
-  const [pagina, setPagina] = useState(1);
-  const [datos, setDatos] = useState<Pagina<Registro> | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [posicion, setPosicion] = useState({ clave: '', pagina: 1 });
+  const pagina = posicion.clave === consulta ? posicion.pagina : 1;
+  const setPagina = (n: number) => setPosicion({ clave: consulta, pagina: n });
 
   const [verDetalle, setVerDetalle] = useState<Registro | null>(null);
   const [historial, setHistorial] = useState<EntradaHistorial[] | null>(null);
@@ -46,23 +47,11 @@ export function Registros({
   const [borrando, setBorrando] = useState<Registro | null>(null);
   const [trabajando, setTrabajando] = useState(false);
 
-  const traer = useCallback(async () => {
-    setError(null);
-    try {
-      const r = await fetch(
-        `/api/registros?${consulta}&pagina=${pagina}&por_pagina=${POR_PAGINA}`,
-      );
-      if (!r.ok) throw new Error();
-      setDatos(await r.json());
-    } catch {
-      setError('No se pudo cargar el listado.');
-    }
-  }, [consulta, pagina]);
-
-  useEffect(() => { void traer(); }, [traer]);
-  // Al cambiar un filtro se vuelve a la primera pagina: quedarse en la 4 de
-  // un listado que ahora tiene 2 mostraria una tabla vacia sin explicacion.
-  useEffect(() => { setPagina(1); }, [consulta]);
+  const ruta = `/api/registros?${consulta}&pagina=${pagina}&por_pagina=${POR_PAGINA}`;
+  const { datos, error, refrescar: traer } = useRecurso(
+    ruta,
+    () => traerJSON<Pagina<Registro>>(ruta),
+  );
 
   async function abrirDetalle(r: Registro) {
     setVerDetalle(r);
@@ -95,7 +84,11 @@ export function Registros({
     void traer();
   }
 
-  if (error) return <p className="text-rojo-600 py-10 text-center text-sm">{error}</p>;
+  if (error) {
+    return <p className="text-rojo-600 py-10 text-center text-sm">
+      No se pudo cargar el listado.
+    </p>;
+  }
 
   if (!datos) {
     return (
@@ -211,7 +204,7 @@ export function Registros({
             variant="outline"
             size="sm"
             disabled={pagina <= 1}
-            onClick={() => setPagina((p) => p - 1)}
+            onClick={() => setPagina(pagina - 1)}
           >
             Anterior
           </Button>
@@ -223,7 +216,7 @@ export function Registros({
             variant="outline"
             size="sm"
             disabled={pagina >= datos.paginas}
-            onClick={() => setPagina((p) => p + 1)}
+            onClick={() => setPagina(pagina + 1)}
           >
             Siguiente
           </Button>
@@ -336,6 +329,7 @@ export function Registros({
           </DialogHeader>
           {editando && (
             <FormularioCarga
+              key={editando.id}
               perfil={perfil}
               catalogos={catalogos}
               editando={editando}

@@ -26,11 +26,11 @@ const RUTA_ADMINISTRADOR = '../lib/supabase/administrador.ts';
 // ---------------------------------------------------------------------------
 
 interface ProfesorPlanilla {
+  /** Como figura en el desplegable de la planilla: 'Prof. Juarez Jessica'. */
   etiqueta: string;
   nombre: string;
   cargo: string;
   email: string;
-  usuario: string;
 }
 
 interface LugarPlanilla {
@@ -39,7 +39,6 @@ interface LugarPlanilla {
 }
 
 interface RegistroPlanilla {
-  origen: string;
   marca_temporal: string;
   email_responsable: string;
   profesor: string;
@@ -49,7 +48,13 @@ interface RegistroPlanilla {
   alumnos_nuevos: number;
   varones: number;
   mujeres: number;
-  estado_clase: string;
+  /** Codigo ya resuelto por el extractor, no el nombre visible. */
+  estado_codigo: string;
+  /** true cuando se dedujo de las observaciones, porque la planilla vieja
+   *  todavia no tenia la columna "Estado de la clase". */
+  estado_inferido: boolean;
+  /** La planilla declara "Clase normal" pero la observacion dice lo contrario. */
+  estado_en_conflicto: boolean;
   observaciones: string;
 }
 
@@ -71,9 +76,8 @@ interface EstadoSemilla {
   orden: number;
 }
 
-// Los tres primeros son los que trae la planilla, escritos igual que ahi para
-// que la importacion de los registros historicos los resuelva por nombre. El
-// cuarto se agrega para cubrir las suspensiones que no son ni clima ni feriado.
+// Los tres primeros son los que trae la planilla; el cuarto se agrega para
+// cubrir las suspensiones que no son ni clima ni feriado.
 const ESTADOS: EstadoSemilla[] = [
   { codigo: 'normal', nombre: 'Clase normal', es_suspension: false, orden: 1 },
   { codigo: 'susp_clima', nombre: 'Suspendida por factores climaticos', es_suspension: true, orden: 2 },
@@ -148,11 +152,25 @@ function exigirVariables<N extends string>(nombres: readonly N[]): Record<N, str
 // Ayudas
 // ---------------------------------------------------------------------------
 
+/**
+ * --simular  recorre toda la planilla y dice exactamente que haria, sin
+ *            escribir una sola fila. Es lo que conviene correr antes de una
+ *            carga masiva: si algo va a fallar, se ve antes y no a mitad.
+ * --detalle  imprime tambien las filas que ya estaban, que en una recarga son
+ *            cientos de lineas de ruido.
+ */
+const SIMULAR = process.argv.includes('--simular');
+const DETALLADO = process.argv.includes('--detalle');
+
 const cuentas = {
   estados: { creados: 0, existentes: 0 },
   lugares: { creados: 0, existentes: 0 },
   usuarios: { creados: 0, existentes: 0, fallidos: 0 },
   registros: { creados: 0, existentes: 0, omitidos: 0, fallidos: 0 },
+  // Del REQ 7: cuantos estados se dedujeron y cuantos quedaron en conflicto.
+  estadosInferidos: 0,
+  estadosEnConflicto: [] as string[],
+  sumasQueNoCierran: [] as string[],
 };
 
 function marca(estado: string): string {
@@ -267,7 +285,7 @@ async function leerPlanilla(): Promise<Planilla> {
 // Pasos de la carga
 // ---------------------------------------------------------------------------
 
-/** Devuelve el mapa nombre normalizado -> código, para resolver los registros. */
+/** Devuelve el mapa codigo -> nombre de los estados de clase. */
 async function sembrarEstados(supabase: ClienteAdmin): Promise<Map<string, string>> {
   console.log('Estados de clase');
 
@@ -294,7 +312,10 @@ async function sembrarEstados(supabase: ClienteAdmin): Promise<Map<string, strin
     }
   }
 
-  return new Map(ESTADOS.map((e) => [normalizar(e.nombre), e.codigo]));
+  // Indexado por codigo: el extractor ya resuelve el estado y la planilla no
+  // trae el nombre visible. Indexarlo por nombre dejaba fuera todos los
+  // registros, porque «normal» no es ninguno de los nombres.
+  return new Map(ESTADOS.map((e) => [e.codigo, e.nombre]));
 }
 
 /** Devuelve el mapa nombre normalizado -> id, para resolver los registros. */
@@ -438,8 +459,12 @@ async function perfilesPorCorreo(
 }
 
 /**
- * Claves fecha|profesor|lugar de lo ya importado, que es lo que hace idempotente
- * la carga. Va paginado porque PostgREST corta el resultado en 1000 filas.
+ * Marcas temporales de lo ya importado: es lo que hace idempotente la carga.
+ *
+ * Se usa la marca y no fecha+profesor+lugar porque hay dias con dos clases
+ * reales del mismo profesor en el mismo lugar, y esa clave las descartaria.
+ * La marca temporal del formulario identifica cada envio sin ambiguedad, y se
+ * guarda en creado_en. Va paginado: PostgREST corta en 1000 filas.
  */
 async function clavesYaImportadas(supabase: ClienteAdmin): Promise<Set<string>> {
   const claves = new Set<string>();
@@ -449,13 +474,13 @@ async function clavesYaImportadas(supabase: ClienteAdmin): Promise<Set<string>> 
     const desde = pagina * tamanio;
     const { data, error } = await supabase
       .from('registros')
-      .select('fecha, profesor_id, lugar_id')
+      .select('creado_en')
       .eq('origen', 'importacion')
       .range(desde, desde + tamanio - 1);
     if (error) fallar('No pude leer los registros ya importados.', error.message);
 
-    const filas = (data ?? []) as { fecha: string; profesor_id: string; lugar_id: number }[];
-    for (const fila of filas) claves.add(`${fila.fecha}|${fila.profesor_id}|${fila.lugar_id}`);
+    const filas = (data ?? []) as { creado_en: string }[];
+    for (const fila of filas) claves.add(new Date(fila.creado_en).toISOString());
     if (filas.length < tamanio) break;
   }
 
@@ -484,14 +509,23 @@ async function sembrarRegistros(
     const etiqueta = `${fechaLegible(fila.fecha)} · ${fila.lugar}`;
     const email = correo(fila.email_responsable);
 
+    // Se resuelve al principio: es la clave que decide si la fila ya esta.
+    const cargadaEn = marcaTemporal(fila.marca_temporal);
+    if (!cargadaEn && fila.marca_temporal) {
+      console.log(
+        `${marca('aviso')}${etiqueta} — la marca temporal «${fila.marca_temporal}» no es ` +
+        'válida; el registro queda con la fecha de la importación.',
+      );
+    }
+
     // REQ 4: si los números no cierran, el dato no entra. Importar en silencio
     // una inconsistencia es peor que dejarla afuera y avisarla.
     const suma = fila.varones + fila.mujeres;
     if (suma !== fila.alumnos_total) {
       cuentas.registros.omitidos += 1;
-      console.log(
-        `${marca('omitido')}${etiqueta} — varones (${fila.varones}) + mujeres ` +
-        `(${fila.mujeres}) = ${suma}, pero el total declarado es ${fila.alumnos_total}.`,
+      cuentas.sumasQueNoCierran.push(
+        `${etiqueta} — varones ${fila.varones} + mujeres ${fila.mujeres} = ${suma}, ` +
+        `pero el total declarado es ${fila.alumnos_total}`,
       );
       continue;
     }
@@ -531,19 +565,18 @@ async function sembrarRegistros(
       continue;
     }
 
-    const estadoCodigo = estados.get(normalizar(fila.estado_clase));
+    const estadoCodigo = estados.has(fila.estado_codigo) ? fila.estado_codigo : null;
     if (!estadoCodigo) {
       cuentas.registros.omitidos += 1;
       console.log(
-        `${marca('omitido')}${etiqueta} — el estado «${fila.estado_clase}» no está definido.`,
+        `${marca('omitido')}${etiqueta} — el estado «${fila.estado_codigo}» no está definido.`,
       );
       continue;
     }
 
-    const clave = `${fila.fecha}|${perfil.id}|${lugarId}`;
-    if (importados.has(clave)) {
+    if (cargadaEn && importados.has(new Date(cargadaEn).toISOString())) {
       cuentas.registros.existentes += 1;
-      console.log(`${marca('ya estaba')}${etiqueta} — ${perfil.nombre}`);
+      if (DETALLADO) console.log(`${marca('ya estaba')}${etiqueta} — ${perfil.nombre}`);
       continue;
     }
 
@@ -559,12 +592,19 @@ async function sembrarRegistros(
       );
     }
 
-    const cargadaEn = marcaTemporal(fila.marca_temporal);
-    if (!cargadaEn && fila.marca_temporal) {
-      console.log(
-        `${marca('aviso')}${etiqueta} — la marca temporal «${fila.marca_temporal}» no es ` +
-        'válida; el registro queda con la fecha de la importación.',
+    if (fila.estado_inferido) cuentas.estadosInferidos += 1;
+    if (fila.estado_en_conflicto) {
+      cuentas.estadosEnConflicto.push(
+        `${etiqueta} — la planilla dice «Clase normal» pero la observación dice ` +
+        `«${fila.observaciones.slice(0, 60)}»`,
       );
+    }
+
+    // En simulacion no se escribe nada: solo se informa que habria pasado.
+    if (SIMULAR) {
+      cuentas.registros.creados += 1;
+      if (DETALLADO) console.log(`${marca('entraria')}${etiqueta} — ${perfil.nombre}`);
+      continue;
     }
 
     const { error: errorAlta } = await supabase.from('registros').insert({
@@ -593,7 +633,7 @@ async function sembrarRegistros(
     }
 
     cuentas.registros.creados += 1;
-    console.log(`${marca('importado')}${etiqueta} — ${perfil.nombre}`);
+    if (DETALLADO) console.log(`${marca('importado')}${etiqueta} — ${perfil.nombre}`);
   }
 }
 
@@ -620,17 +660,46 @@ function resumir(): void {
     (cuentas.usuarios.fallidos > 0 ? ` · ${cuentas.usuarios.fallidos} con error` : ''),
   );
   console.log(
-    `  Registros         ${n(cuentas.registros.creados)} importados` +
+    `  Registros         ${n(cuentas.registros.creados)}` +
+    (SIMULAR ? ' entrarían' : ' importados') +
     ` · ${cuentas.registros.existentes} ya estaban` +
     ` · ${cuentas.registros.omitidos} omitidos por datos incoherentes` +
     (cuentas.registros.fallidos > 0 ? ` · ${cuentas.registros.fallidos} con error` : ''),
   );
 
-  if (cuentas.registros.omitidos > 0) {
+  // REQ 7: los estados deducidos cambian los indicadores de suspensiones, asi
+  // que se informa cuantos son. No es un detalle menor: en la planilla vieja la
+  // columna "Estado de la clase" no existia.
+  if (cuentas.estadosInferidos > 0) {
     console.log(
-      '\nLos registros omitidos figuran más arriba con el motivo al lado: casi siempre\n' +
-      'son números que no cierran. Corregilos en la planilla y volvé a correr la carga,\n' +
-      'que no duplica lo que ya está importado.',
+      `\n  Estado deducido de las observaciones en ${cuentas.estadosInferidos} registros,\n` +
+      '  porque son anteriores a que el formulario tuviera esa columna. Se consideran\n' +
+      '  suspendidas las clases sin asistentes cuya observación habla de lluvia,\n' +
+      '  feriado o suspensión; con alumnos presentes, la clase se cuenta como dada.',
+    );
+  }
+
+  if (cuentas.estadosEnConflicto.length > 0) {
+    console.log(
+      `\n  ${cuentas.estadosEnConflicto.length} registro(s) con el estado en conflicto: la\n` +
+      '  planilla los declara normales pero la observación dice otra cosa. Se respeta lo\n' +
+      '  declarado; si corresponde, corregilos desde el panel:',
+    );
+    for (const x of cuentas.estadosEnConflicto) console.log(`    • ${x}`);
+  }
+
+  if (cuentas.sumasQueNoCierran.length > 0) {
+    console.log(
+      `\n  ${cuentas.sumasQueNoCierran.length} registro(s) quedaron afuera porque los números\n` +
+      '  no cierran (REQ 4). Corregilos en la planilla y volvé a correr la carga, que no\n' +
+      '  duplica lo ya importado:',
+    );
+    for (const x of cuentas.sumasQueNoCierran) console.log(`    • ${x}`);
+  }
+
+  if (cuentas.registros.omitidos > cuentas.sumasQueNoCierran.length) {
+    console.log(
+      '\n  El resto de los omitidos figura más arriba con el motivo al lado.',
     );
   }
 

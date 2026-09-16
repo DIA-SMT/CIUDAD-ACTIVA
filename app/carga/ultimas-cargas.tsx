@@ -1,12 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Pencil } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { diasEntre, fmt, hoyISO } from '@/lib/fechas';
+import { traerJSON, useRecurso } from '@/lib/usar-recurso';
 import type { Pagina, Perfil, Registro } from '@/lib/tipos';
 
 /** Debe coincidir con parametros.ventana_edicion_dias de la base. */
@@ -22,27 +23,15 @@ export function UltimasCargas({
   recargar: number;
   onEditar: (r: Registro) => void;
 }) {
-  const [registros, setRegistros] = useState<Registro[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const ruta = `/api/registros?profesor_id=${perfil.id}&por_pagina=10&orden=creado_desc`;
+  // `recargar` entra en la clave para volver a pedir despues de cada guardado.
+  const { datos, error, refrescar } = useRecurso(
+    `${ruta}#${recargar}`,
+    () => traerJSON<Pagina<Registro>>(ruta),
+  );
+  const registros = datos?.datos ?? null;
 
-  const traer = useCallback(async () => {
-    setError(null);
-    try {
-      const r = await fetch(
-        `/api/registros?profesor_id=${perfil.id}&por_pagina=10&orden=creado_desc`,
-      );
-      if (!r.ok) throw new Error();
-      const p = (await r.json()) as Pagina<Registro>;
-      setRegistros(p.datos);
-    } catch {
-      setError('No se pudo cargar el listado.');
-      setRegistros([]);
-    }
-  }, [perfil.id]);
-
-  useEffect(() => {
-    void traer();
-  }, [traer, recargar]);
+  useEffect(() => { refrescar(); }, [recargar, refrescar]);
 
   const editable = (r: Registro) =>
     perfil.rol === 'admin' || diasEntre(r.fecha, hoyISO()) <= VENTANA_DIAS;

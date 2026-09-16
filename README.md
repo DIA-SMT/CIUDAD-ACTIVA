@@ -148,6 +148,57 @@ donde están los datos y RLS sigue aplicando, porque son `security invoker`.
 
 ---
 
+## Carga masiva desde la planilla
+
+`supabase/datos-planilla.json` tiene los **559 registros** de la planilla, extraídos
+con `scripts/extraer-planilla.py`. Antes de cargarlos, simulá:
+
+```bash
+npm run db:simular
+```
+
+Recorre toda la planilla y dice exactamente qué haría —cuántos entrarían, cuáles
+ya están y cuáles quedarían afuera— **sin escribir una sola fila**. Cuando el
+resultado convenza:
+
+```bash
+npm run db:sembrar
+```
+
+Es idempotente: la deduplicación va por la marca temporal del formulario, que
+identifica cada envío. Se puede correr las veces que haga falta.
+
+### Lo que hay que saber de esos datos
+
+**Las dos hojas no son 966 registros.** La hoja `BD` resultó ser un subconjunto
+completo de `Respuestas de formulario`: sus 389 filas están todas en la otra.
+El universo real es de 559 registros únicos.
+
+**La columna "Estado de la clase" se agregó al formulario el 11/05/2026.** Los
+360 registros anteriores no la tienen, y 57 de ellos describen una suspensión en
+las observaciones. Importarlos todos como "Clase normal" haría que el tablero
+mostrara cero suspensiones en todo el primer año del programa y contara como
+dadas 57 clases que nunca se dictaron.
+
+Por eso el estado se deduce, con esta regla:
+
+- Si la planilla lo declara, se respeta.
+- Si no, y **hubo alumnos**, la clase se dio: `Clase normal`.
+- Si no, y **no hubo nadie**, se busca el motivo en las observaciones:
+  feriado → `Suspendida por feriado`; lluvia, tormenta o clima →
+  `Suspendida por factores climáticos`; otra mención de suspensión →
+  `Suspendida por otro motivo`.
+- Sin ninguna pista, la clase se cuenta como dada sin asistentes.
+
+La diferencia no es menor: **467 realizadas y 92 suspendidas** con la regla,
+contra 527 y 32 sin ella. La carga informa cuántos estados dedujo.
+
+**Seis registros quedan afuera** porque los números no cierran (requisito 4).
+Se listan al final de la carga con el detalle; corregilos en la planilla,
+regenerá el JSON y volvé a correr.
+
+---
+
 ## Sobre los datos de la planilla original
 
 Al procesar la planilla aparecieron los problemas que el sistema viene a evitar:

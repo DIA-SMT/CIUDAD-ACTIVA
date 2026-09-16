@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "db:migrar": "node --experimental-strip-types scripts/migrar.ts",
     "db:sembrar": "node --experimental-strip-types scripts/sembrar.ts",
+    "db:simular": "node --experimental-strip-types scripts/sembrar.ts --simular",
     "test": "node --test tests/*.test.ts"
   },
   "dependencies": {
