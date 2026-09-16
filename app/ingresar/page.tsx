@@ -8,10 +8,10 @@ export const metadata: Metadata = { title: 'Ingresar' };
 
 export default function Ingresar() {
   return (
-    <main className="from-verde-50 flex min-h-dvh flex-col items-center justify-center bg-gradient-to-b to-white px-4 py-10">
+    <main className="from-azul-50 flex min-h-dvh flex-col items-center justify-center bg-gradient-to-b to-white px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-4 text-center">
-          <Marca />
+          <Marca prioridad />
           <p className="text-muted-foreground text-sm text-balance">
             Registro de actividades · Municipalidad de San Miguel de Tucumán
           </p>

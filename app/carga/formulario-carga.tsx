@@ -397,7 +397,7 @@ export function FormularioCarga({
               !haySuma
                 ? 'text-muted-foreground'
                 : coincide
-                  ? 'border-verde-100 bg-verde-50 text-verde-900'
+                  ? 'border-azul-100 bg-azul-50 text-azul-900'
                   : 'border-rojo-600/30 bg-rojo-600/5 text-rojo-600'
             }`}
           >

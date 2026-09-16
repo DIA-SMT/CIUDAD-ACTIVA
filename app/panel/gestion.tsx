@@ -195,7 +195,7 @@ function Profesores({ perfil }: { perfil: Perfil }) {
                   </TableCell>
                   <TableCell>
                     {u.activo ? (
-                      <span className="text-verde-700 text-sm">Activo</span>
+                      <span className="text-azul-700 text-sm">Activo</span>
                     ) : (
                       <span className="text-muted-foreground text-sm">Inactivo</span>
                     )}
@@ -408,7 +408,7 @@ function Lugares() {
                 <TableCell className="font-medium">{l.nombre}</TableCell>
                 <TableCell>
                   {l.activo ? (
-                    <span className="text-verde-700 text-sm">Activo</span>
+                    <span className="text-azul-700 text-sm">Activo</span>
                   ) : (
                     <span className="text-muted-foreground text-sm">Inactivo</span>
                   )}

@@ -37,6 +37,27 @@ de Supabase, en *Project Settings*:
 | `SUPABASE_SERVICE_ROLE_KEY` | API | **secreta**, saltea RLS; sólo para alta de usuarios y reseteo de contraseñas |
 | `DATABASE_URL` | Database | conexión directa, para migraciones y carga inicial |
 | `PASSWORD_INICIAL` | — | contraseña que se asigna en la carga inicial |
+| `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com) | asistente del panel; **opcional** |
+
+Sin `ANTHROPIC_API_KEY` el sistema funciona completo: sólo la pestaña Asistente
+avisa que no está configurada.
+
+### El asistente del panel
+
+Los administradores tienen una pestaña donde preguntar en castellano: *"¿qué
+profesor dio más clases?"*, *"¿cuántas se suspendieron por lluvia y en qué
+plazas?"*, *"¿cómo viene este mes contra el anterior?"*.
+
+**No escribe SQL ni consulta la base por su cuenta.** Elige entre las mismas
+funciones que alimentan el tablero, con los mismos filtros. Eso importa por tres
+razones: no puede inventar un número —lo que responde sale de donde salen los
+indicadores, así que nunca puede contradecir el tablero—; no puede ver ni tocar
+nada que el usuario no pueda, porque las consultas van con su sesión y RLS sigue
+aplicando; y si mañana cambia la definición de "clase realizada", la respeta sola.
+
+Cada respuesta trae un desplegable **"de dónde salen estos números"** con las
+consultas que se hicieron. En un sistema del que salen informes, poder rastrear
+un número importa tanto como el número.
 
 ### Qué deja la carga inicial
 

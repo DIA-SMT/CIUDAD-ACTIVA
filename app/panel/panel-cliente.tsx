@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Catalogos, Perfil } from '@/lib/tipos';
+import { Asistente } from './asistente';
 import { BarraFiltros } from './filtros';
 import { Gestion } from './gestion';
 import { Registros } from './registros';
@@ -39,6 +40,7 @@ function PanelInterno({
         <TabsList className="no-imprimir">
           <TabsTrigger value="tablero">Tablero</TabsTrigger>
           <TabsTrigger value="registros">Registros</TabsTrigger>
+          {esAdmin && <TabsTrigger value="asistente">Asistente</TabsTrigger>}
           {esAdmin && <TabsTrigger value="gestion">Gestión</TabsTrigger>}
         </TabsList>
 
@@ -49,6 +51,12 @@ function PanelInterno({
         <TabsContent value="registros" className="mt-5">
           <Registros perfil={perfil} catalogos={catalogos} />
         </TabsContent>
+
+        {esAdmin && (
+          <TabsContent value="asistente" className="mt-5">
+            <Asistente perfil={perfil} />
+          </TabsContent>
+        )}
 
         {esAdmin && (
           <TabsContent value="gestion" className="mt-5">

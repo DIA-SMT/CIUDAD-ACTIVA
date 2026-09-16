@@ -139,11 +139,11 @@ export function FormularioIngreso() {
   if (paso === 'cambio') {
     return (
       <form onSubmit={cambiar} className="space-y-5" noValidate>
-        <div className="bg-verde-50 border-verde-100 flex gap-3 rounded-lg border p-4">
-          <ShieldCheck className="text-verde-700 mt-0.5 h-5 w-5 shrink-0" aria-hidden />
-          <div className="text-verde-900 text-sm">
+        <div className="bg-azul-50 border-azul-100 flex gap-3 rounded-lg border p-4">
+          <ShieldCheck className="text-azul-700 mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+          <div className="text-azul-900 text-sm">
             <p className="font-medium">Elegí tu contraseña</p>
-            <p className="text-verde-900/80 mt-1">
+            <p className="text-azul-900/80 mt-1">
               Entraste con la contraseña que asignó la Dirección, que es la misma para
               todos. Poné una tuya para seguir.
             </p>
@@ -191,7 +191,7 @@ export function FormularioIngreso() {
             type="checkbox"
             checked={verPassword}
             onChange={(e) => setVerPassword(e.target.checked)}
-            className="accent-verde-700 h-4 w-4"
+            className="accent-azul-700 h-4 w-4"
           />
           Ver lo que escribo
         </label>

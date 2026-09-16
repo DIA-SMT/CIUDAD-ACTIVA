@@ -288,7 +288,7 @@ export function Registros({
                       {historial.map((h) => (
                         <li key={h.id} className="relative">
                           <span
-                            className="bg-verde-600 absolute -left-[21px] top-1.5 size-2.5 rounded-full"
+                            className="bg-azul-600 absolute -left-[21px] top-1.5 size-2.5 rounded-full"
                             aria-hidden
                           />
                           <p className="text-sm">
