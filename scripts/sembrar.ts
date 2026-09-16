@@ -479,14 +479,24 @@ async function sembrarRegistros(
       continue;
     }
 
-    const perfil = perfiles.get(email);
-    if (!perfil) {
+    // Quien envió el formulario, segun el correo que capturo Google.
+    const quienCargo = perfiles.get(email);
+    if (!quienCargo) {
       cuentas.registros.omitidos += 1;
       console.log(
         `${marca('omitido')}${etiqueta} — no hay ningún profesor con el correo ${email}.`,
       );
       continue;
     }
+
+    // Quien dicto la clase, segun lo que la persona eligio en el desplegable.
+    //
+    // No son siempre el mismo: hay cargas hechas desde la cuenta de un colega.
+    // La planilla vieja tenia una sola columna y obligaba a elegir uno de los
+    // dos; el esquema nuevo tiene profesor_id y cargado_por separados, asi que
+    // se conservan los dos hechos en vez de descartar uno.
+    const correoDictante = correoDeEtiqueta.get(fila.profesor.trim());
+    const perfil = (correoDictante && perfiles.get(correoDictante)) || quienCargo;
 
     const lugarId = lugares.get(normalizar(fila.lugar));
     if (!lugarId) {
@@ -511,11 +521,15 @@ async function sembrarRegistros(
       continue;
     }
 
-    const esperado = correoDeEtiqueta.get(fila.profesor.trim());
-    if (esperado && esperado !== email) {
+    if (perfil.id !== quienCargo.id) {
       console.log(
-        `${marca('aviso')}${etiqueta} — la planilla lo anota a nombre de «${fila.profesor}» ` +
-        `pero lo cargó ${email}. Se importa a nombre del correo.`,
+        `${marca('aviso')}${etiqueta} — la clase queda a nombre de ${perfil.nombre} ` +
+        `(lo que dice la planilla) y la carga, a nombre de ${quienCargo.nombre} (${email}).`,
+      );
+    } else if (!correoDictante) {
+      console.log(
+        `${marca('aviso')}${etiqueta} — «${fila.profesor}» no figura en el listado de ` +
+        `profesores; se usa el titular del correo, ${quienCargo.nombre}.`,
       );
     }
 
@@ -530,7 +544,7 @@ async function sembrarRegistros(
       mujeres: fila.mujeres,
       observaciones: (fila.observaciones ?? '').trim(),
       email_responsable: email,
-      cargado_por: perfil.id,
+      cargado_por: quienCargo.id,
       origen: 'importacion',
     });
 
