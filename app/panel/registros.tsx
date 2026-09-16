@@ -273,7 +273,15 @@ export function Registros({
                   {verDetalle.cargado_por_nombre && (
                     <p>Cargado por: {verDetalle.cargado_por_nombre}</p>
                   )}
-                  <p>Creado: {fmt.fechaHora(verDetalle.creado_en)}</p>
+                  {/* En los importados, creado_en es cuando se reporto la clase
+                      en la planilla vieja, no cuando entro a este sistema. */}
+                  <p>
+                    {verDetalle.origen === 'importacion' ? 'Reportado en la planilla' : 'Cargado'}
+                    : {fmt.fechaHora(verDetalle.creado_en)}
+                  </p>
+                  {verDetalle.actualizado_en !== verDetalle.creado_en && (
+                    <p>Última modificación: {fmt.fechaHora(verDetalle.actualizado_en)}</p>
+                  )}
                 </div>
 
                 <div>

@@ -174,6 +174,32 @@ function fechaLegible(iso: string): string {
   return anio && mes && dia ? `${dia}/${mes}/${anio}` : String(iso);
 }
 
+/**
+ * Marca temporal de la planilla -> timestamptz.
+ *
+ * Google la registro en hora de Argentina, que es UTC-3 todo el año desde 2009.
+ * Sin el desplazamiento explicito, Postgres la interpretaria como UTC y cada
+ * carga quedaria tres horas adelantada: una clase reportada a las 22 pasaria a
+ * figurar al dia siguiente.
+ *
+ * Es el dato que permite ver cuanto tarda cada profesor en reportar la clase.
+ * Si viene vacia o absurda se devuelve null y la base usa su valor por defecto.
+ */
+function marcaTemporal(valor: string | null | undefined): string | null {
+  const texto = String(valor ?? '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?/.test(texto)) return null;
+
+  const conHuso = `${texto.slice(0, 10)}T${texto.slice(11, 19).padEnd(8, ':00')}-03:00`;
+  const fecha = new Date(conHuso);
+  if (Number.isNaN(fecha.getTime())) return null;
+
+  // El programa arranco en 2024; una marca anterior, o futura, es un dato roto.
+  const anio = fecha.getUTCFullYear();
+  if (anio < 2024 || fecha.getTime() > Date.now() + 86_400_000) return null;
+
+  return conHuso;
+}
+
 function servidorDe(url: string): string {
   try {
     return new URL(url).hostname || 'el proyecto configurado';
@@ -533,6 +559,14 @@ async function sembrarRegistros(
       );
     }
 
+    const cargadaEn = marcaTemporal(fila.marca_temporal);
+    if (!cargadaEn && fila.marca_temporal) {
+      console.log(
+        `${marca('aviso')}${etiqueta} — la marca temporal «${fila.marca_temporal}» no es ` +
+        'válida; el registro queda con la fecha de la importación.',
+      );
+    }
+
     const { error: errorAlta } = await supabase.from('registros').insert({
       fecha: fila.fecha,
       profesor_id: perfil.id,
@@ -546,6 +580,10 @@ async function sembrarRegistros(
       email_responsable: email,
       cargado_por: quienCargo.id,
       origen: 'importacion',
+      // Cuando se reporto la clase, no cuando se corrio esta importacion. Sin
+      // esto los 966 registros historicos quedarian todos con el mismo sello y
+      // se perderia el desfasaje entre dar la clase y cargarla.
+      ...(cargadaEn ? { creado_en: cargadaEn, actualizado_en: cargadaEn } : {}),
     });
 
     if (errorAlta) {
