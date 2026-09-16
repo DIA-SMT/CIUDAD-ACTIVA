@@ -1,158 +1,192 @@
-# Contrato de la API — Ciudad Activa
+# Contrato — Ciudad Activa (Next.js + Supabase)
 
-Documento normativo. Backend y frontend se construyen contra esto.
+Documento normativo. Todo se construye contra esto.
 
-## Convenciones
+## Arquitectura
 
-- Todo bajo `/api`. Respuestas y cuerpos en JSON (`Content-Type: application/json`).
-- Autenticación por cookie `ca_sesion` (httpOnly, sameSite=lax, path=/).
-- Error estándar: `{ "error": "mensaje para el usuario", "errores": { "campo": "detalle" } }`
-  (`errores` sólo en validaciones, 422).
-- Códigos: 200 ok · 201 creado · 400 pedido mal formado · 401 sin sesión ·
-  403 sin permiso · 404 no existe · 409 conflicto (duplicado) · 422 validación · 500 error interno.
-- Cada archivo de rutas exporta por defecto un `Router` de Express.
-- Texto de cara al usuario **en español**. Sin `console.log` en producción.
+- **Next.js 16, App Router, TypeScript.** Tailwind 4 + shadcn/ui.
+- **Supabase**: Postgres + Auth. El esquema está en `supabase/migrations/`.
+- **Los permisos los aplica la base**, no la aplicación: políticas RLS sobre
+  `registros` y `perfiles`. Los Route Handlers usan el cliente con la sesión del
+  usuario (`clienteServidor()`), nunca la clave de servicio, para que RLS corra
+  y `auth.uid()` esté disponible.
+- **La auditoría del REQ 6 la escribe un trigger** (`fn_auditar_registros`), no
+  el código. Ningún camino puede modificar un registro sin dejar rastro.
+- La clave de servicio (`clienteAdministrador()`) se usa **sólo** para alta de
+  usuarios y reseteo de contraseñas, que son operaciones de la Admin API.
 
-## Tipos
+### Identificadores
 
-```
-Perfil        { id, nombre, cargo, email, usuario, rol, dicta_clases, debe_cambiar_password }
-Registro      { id, fecha, profesor_id, profesor_nombre, profesor_cargo,
-                lugar_id, lugar_nombre, estado_codigo, estado_nombre, es_suspension,
-                alumnos_total, alumnos_nuevos, varones, mujeres,
-                observaciones, email_responsable, origen,
-                cargado_por, cargado_por_nombre, creado_en, actualizado_en,
-                anio, mes, periodo }     // tal cual la vista v_registros
-CuerpoRegistro{ fecha, profesor_id, lugar_id, estado_codigo,
-                alumnos_total, alumnos_nuevos, varones, mujeres,
-                observaciones, email_responsable, confirmar_duplicado? }
-```
+`profesor_id` y `cargado_por` son **uuid** (vienen de `auth.users`).
+`lugar_id` es **bigint**. `estado_codigo` es **text**.
+
+## Convenciones de la API
+
+- Error: `{ error: string, errores?: Record<string,string>, duplicados?: Registro[] }`
+- Códigos: 200 · 201 · 400 · 401 · 403 · 404 · 409 (duplicado) · 422 (validación) · 500
+- Los Route Handlers van en `app/api/**/route.ts` y exportan `GET`/`POST`/`PATCH`/`DELETE`.
+- Texto de cara al usuario **en español rioplatense** (vos/tenés/cargá).
+- El middleware (`middleware.ts`) ya responde 401 a `/api/*` sin sesión.
+  Igual, cada handler vuelve a pedir la sesión con `sesionActual()`.
+
+## Autenticación
+
+No hay rutas propias de login: lo resuelve `@supabase/ssr` desde el cliente.
+
+- Ingreso: `supabase.auth.signInWithPassword({ email, password })`
+- Salida: `supabase.auth.signOut()`
+- Cambio de contraseña: `supabase.auth.updateUser({ password })`
+- Perfil del usuario en el servidor: `sesionActual()` de `lib/supabase/servidor.ts`
+
+**Los profesores entran con su correo electrónico**, que es el que trae la planilla.
+
+El primer ingreso obliga a cambiar la contraseña. Se marca con
+`user_metadata.debe_cambiar_password = true`, que la carga inicial pone en true
+y la pantalla de cambio pone en false.
 
 ## Filtros comunes (REQ 8)
 
-Aceptados como query string por el listado, la exportación y **todas** las estadísticas:
+Query string aceptado por el listado, la exportación y **todos** los indicadores:
 
-| parámetro     | ejemplo      | significado                                  |
-|---------------|--------------|----------------------------------------------|
-| `desde`       | `2026-01-01` | fecha de la actividad, inclusive             |
-| `hasta`       | `2026-09-30` | fecha de la actividad, inclusive             |
-| `profesor_id` | `4`          | REQ 8 – profesor                             |
-| `lugar_id`    | `2`          | REQ 8 – lugar                                |
-| `estado`      | `susp_clima` | REQ 8 – estado de la clase                   |
-| `q`           | `lluvia`     | busca en observaciones, profesor y lugar     |
+| parámetro | ejemplo | |
+|---|---|---|
+| `desde` | `2026-01-01` | fecha de la actividad, inclusive |
+| `hasta` | `2026-09-30` | fecha de la actividad, inclusive |
+| `profesor_id` | uuid | REQ 8 |
+| `lugar_id` | `2` | REQ 8 |
+| `estado` | `susp_clima` | REQ 8 |
+| `q` | `lluvia` | busca en observaciones, profesor y lugar |
 
-Se traducen con `filtrosRegistros(query)` de `src/db/index.js`. **Usar siempre esa función**:
-es la única definición de los filtros, y garantiza que el listado y los indicadores
-miren exactamente el mismo subconjunto.
+Se leen con `filtrosDeQuery(searchParams)` de `lib/consultas.ts`. **Usar siempre
+esa función**: es la única definición, y garantiza que el listado y los
+indicadores miren el mismo subconjunto.
 
-## `/api/auth`
+## `/api/catalogos`
 
-| método | ruta        | sesión | cuerpo / query          | respuesta |
-|--------|-------------|--------|-------------------------|-----------|
-| POST   | `/login`    | no     | `{usuario, password}`   | `{usuario: Perfil}` · 401 si no coincide |
-| POST   | `/logout`   | sí     | —                       | `{ok:true}` |
-| GET    | `/sesion`   | no     | —                       | `{usuario: Perfil}` · 401 si no hay sesión |
-| POST   | `/password` | sí     | `{actual, nueva}`       | `{ok:true}` · 422 si `nueva` no cumple reglas |
+`GET` → `{ profesores: [{id, nombre, cargo, email}], lugares: [{id, nombre}], estados: [{codigo, nombre, es_suspension}] }`
 
-- `usuario` en el login acepta **nombre de usuario o correo**.
-- Tras 8 intentos fallidos del mismo usuario en 15 minutos se responde 429 durante 15 minutos.
-- El login actualiza `ultimo_acceso`. `/password` pone `debe_cambiar_password = 0`.
-- Nunca se devuelve `password_hash`.
-
-## `/api/catalogos` — requiere sesión
-
-`GET /` → `{ profesores: [{id, nombre, cargo, email}], lugares: [{id, nombre}], estados: [{codigo, nombre, es_suspension}] }`
-
-Sólo elementos activos. `profesores` = `activo = 1 AND dicta_clases = 1`, ordenados por nombre.
+Sólo activos. `profesores` = `activo AND dicta_clases`, ordenados por nombre.
 Es el listado de autorizados del REQ 2 y los espacios del REQ 3.
 
-## `/api/registros` — requiere sesión
+## `/api/registros`
 
-| método | ruta            | permiso | descripción |
-|--------|-----------------|---------|-------------|
-| GET    | `/`             | sesión  | listado paginado con los filtros comunes |
-| POST   | `/`             | sesión  | alta |
-| GET    | `/:id`          | sesión  | uno |
-| PUT    | `/:id`          | ver abajo | edición |
-| DELETE | `/:id`          | admin   | baja |
-| GET    | `/:id/historial`| sesión  | REQ 6 |
-| GET    | `/exportar.csv` | sesión  | mismos filtros, sin paginar |
+| método | ruta | |
+|---|---|---|
+| GET | `/api/registros` | listado paginado con los filtros comunes |
+| POST | `/api/registros` | alta |
+| GET | `/api/registros/[id]` | uno |
+| PATCH | `/api/registros/[id]` | edición |
+| DELETE | `/api/registros/[id]` | baja (RLS la limita a admin) |
+| GET | `/api/registros/[id]/historial` | REQ 6 |
+| GET | `/api/registros/exportar` | CSV, mismos filtros, sin paginar |
 
-**GET /** query extra: `pagina` (1), `por_pagina` (25, máx 200),
-`orden` ∈ `fecha_desc` (por defecto) · `fecha_asc` · `alumnos_desc` · `creado_desc`.
+**GET** query extra: `pagina` (1), `por_pagina` (25, máx 200), `orden` ∈
+`fecha_desc` (def.) · `fecha_asc` · `alumnos_desc` · `creado_desc`.
 → `{ datos: Registro[], total, pagina, por_pagina, paginas }`
+Se consulta la vista `v_registros` con `.select('*', { count: 'exact' })`.
 
-**POST /** — valida con `validarRegistro()` de `src/lib/validacion.js` (REQ 4).
-- Un `profesor` sólo puede cargar con `profesor_id` igual al suyo; un `admin`, cualquiera.
-- Si falta `email_responsable`, se usa el del usuario de la sesión.
+**POST** — valida con `validarRegistro()` de `lib/validacion.ts` (REQ 4).
+- Si falta `email_responsable`, se usa el de la sesión.
 - Si ya existe un registro con la misma fecha + profesor + lugar y no vino
-  `confirmar_duplicado: true` → **409** `{error, duplicados: Registro[]}`.
-  Con `confirmar_duplicado: true` se graba igual (hay días con dos clases reales).
-- Éxito → 201 `{registro: Registro}` y asiento `creacion` en el historial.
+  `confirmar_duplicado: true` → **409** `{ error, duplicados }`. Hay días con
+  dos clases reales, así que se avisa, no se bloquea.
+- `cargado_por` = usuario de la sesión. `origen` = `'web'`.
+- 201 `{ registro }`. **No escribir el historial**: lo hace el trigger.
+- Si RLS rechaza (un profesor cargando a nombre de otro), Supabase devuelve el
+  código `42501` → traducirlo a **403** con un mensaje que explique el motivo.
 
-**PUT /:id** — mismas validaciones. Permisos (REQ 6):
-- `admin`: siempre.
-- `profesor`: sólo registros propios (`profesor_id` o `cargado_por` suyos) y sólo si la
-  fecha de la clase no tiene más de `config.ventanaEdicionProfesorDias` días. Si no, 403
-  con un mensaje que explique el motivo. Un profesor no puede reasignar el registro a otro profesor.
-- Escribe **una fila por campo modificado** en `registros_historial`
-  (usar `CAMPOS_AUDITABLES` y `ETIQUETAS_CAMPOS` de `src/lib/validacion.js`).
+**PATCH** — mismas validaciones. Los permisos del REQ 6 los aplica RLS: un
+profesor sólo puede editar lo propio y dentro de la ventana
+(`parametros.ventana_edicion_dias`, 7 días). Si la actualización afecta 0 filas,
+es porque RLS la bloqueó → 403 explicando que venció el plazo y que puede
+pedirle el cambio a la Dirección.
 
-**DELETE /:id** — sólo admin. Antes de borrar, asiento `eliminacion` con el contenido previo.
+**DELETE** — RLS la limita a admin. 0 filas afectadas → 403.
 
-**GET /:id/historial** → `{ historial: [{id, accion, campo, etiqueta_campo, valor_anterior, valor_nuevo, usuario_nombre, fecha_hora}] }`, más reciente primero.
+**GET historial** → `{ historial: EntradaHistorial[] }`, más reciente primero,
+con `etiqueta_campo` resuelta con `ETIQUETAS_CAMPOS` de `lib/validacion.ts`.
 
-**GET /exportar.csv** → `text/csv; charset=utf-8`, con BOM `﻿` y separador `;`
-(para que Excel en español lo abra en columnas), cabeceras en español,
-`Content-Disposition: attachment; filename="ciudad-activa-<fecha>.csv"`.
+**GET exportar** → `text/csv; charset=utf-8`, BOM `﻿`, separador `;`,
+cabeceras en español, `Content-Disposition: attachment; filename="ciudad-activa-<fecha>.csv"`.
 
-## `/api/estadisticas` — requiere sesión (REQ 7)
+## `/api/estadisticas` (REQ 7)
 
-Todas aceptan los filtros comunes. En todas, **clase realizada = `es_suspension = 0`**;
-los promedios y totales de alumnos se calculan sólo sobre clases realizadas.
-Los porcentajes se devuelven ya calculados, con un decimal, y valen `0` si el denominador es 0.
+Los indicadores son **funciones SQL** definidas en
+`supabase/migrations/0002_estadisticas.sql` y se llaman con `supabase.rpc()`.
+Son `security invoker`, así que RLS sigue aplicando.
 
-| ruta            | respuesta |
-|-----------------|-----------|
-| `/resumen`      | `{clases_registradas, clases_realizadas, clases_suspendidas, porcentaje_suspendidas, alumnos_total, alumnos_nuevos, varones, mujeres, porcentaje_varones, porcentaje_mujeres, promedio_por_clase, profesores_activos, lugares_activos, primera_fecha, ultima_fecha}` |
-| `/por-profesor` | `[{profesor_id, profesor, cargo, clases, alumnos, alumnos_nuevos, promedio, suspendidas}]` ordenado por alumnos desc |
-| `/por-lugar`    | `[{lugar_id, lugar, clases, alumnos, alumnos_nuevos, promedio, suspendidas, ultima_clase}]` ordenado por alumnos desc |
-| `/evolucion`    | query `agrupar` ∈ `dia`·`semana`·`mes` (def. `mes`) → `[{periodo, etiqueta, clases, alumnos, alumnos_nuevos, promedio}]` en orden cronológico |
-| `/sexo`         | `{varones, mujeres, porcentaje_varones, porcentaje_mujeres, por_periodo: [{periodo, etiqueta, varones, mujeres}]}` |
-| `/suspensiones` | `{total, porcentaje, por_motivo: [{codigo, nombre, cantidad, porcentaje}], por_lugar: [{lugar, cantidad}], detalle: [{id, fecha, lugar, profesor, estado_nombre, observaciones}]}` |
-| `/tablero`      | `{resumen, por_profesor, por_lugar, evolucion, sexo, suspensiones}` — compone las anteriores en una sola llamada; es la que usa el panel |
+Todas reciben los mismos parámetros:
 
-Cobertura de los indicadores pedidos: cantidad de clases realizadas · alumnos registrados ·
-alumnos nuevos · distribución por sexo · clases por profesor · alumnos por profesor ·
-alumnos por lugar · promedio por clase · evolución de la matrícula · cantidad y porcentaje
-de clases suspendidas · motivos de suspensión · nivel de actividad de cada espacio ·
-evolución de la participación por período.
+```
+p_desde date, p_hasta date, p_profesor uuid, p_lugar bigint, p_estado text, p_q text
+```
 
-## `/api/admin` — requiere rol `admin`
+(`null` = sin filtrar). `estadisticas_evolucion`, `estadisticas_sexo` y
+`estadisticas_tablero` reciben además `p_agrupar text` ∈ `dia` · `semana` · `mes`
+(por defecto `mes`), porque las tres devuelven una serie por período. Sus rutas
+tienen que pasarlo: si se deja caer en el valor por defecto, un gráfico queda en
+meses mientras el de al lado muestra días.
 
-| método | ruta                    | descripción |
-|--------|-------------------------|-------------|
-| GET    | `/usuarios`             | todos, incluidos inactivos, sin `password_hash` |
-| POST   | `/usuarios`             | alta `{nombre, cargo, email, usuario, rol, dicta_clases, password}` |
-| PUT    | `/usuarios/:id`         | edita `{nombre, cargo, email, usuario, rol, dicta_clases, activo}` |
-| POST   | `/usuarios/:id/password`| reset `{nueva}` → deja `debe_cambiar_password = 1` |
-| GET    | `/lugares`              | todos, incluidos inactivos |
-| POST   | `/lugares`              | alta `{nombre, descripcion, orden}` |
-| PUT    | `/lugares/:id`          | edita `{nombre, descripcion, activo, orden}` |
-| GET    | `/historial`            | auditoría global; query `registro_id`, `usuario_id`, `desde`, `hasta`, `pagina`, `por_pagina` |
+| función SQL | ruta | devuelve |
+|---|---|---|
+| `estadisticas_resumen` | `/api/estadisticas/resumen` | `Resumen` |
+| `estadisticas_por_profesor` | `/api/estadisticas/por-profesor` | `FilaProfesor[]` |
+| `estadisticas_por_lugar` | `/api/estadisticas/por-lugar` | `FilaLugar[]` |
+| `estadisticas_evolucion` | `/api/estadisticas/evolucion` | `PuntoEvolucion[]` |
+| `estadisticas_sexo` | `/api/estadisticas/sexo` | `DistribucionSexo` |
+| `estadisticas_suspensiones` | `/api/estadisticas/suspensiones` | `Suspensiones` |
+| `estadisticas_tablero` | `/api/estadisticas/tablero` | `Tablero` |
 
-Reglas: un admin no puede desactivarse ni quitarse el rol a sí mismo; no se puede
-desactivar al último admin activo. Un lugar o usuario con registros asociados **no se
-elimina**, se desactiva (`activo = 0`): deja de ofrecerse en el formulario pero el
-histórico del REQ 5 queda intacto.
+Las formas exactas están en `lib/tipos.ts` y son de cumplimiento obligatorio.
 
-## Frontend
+**Reglas de cálculo, únicas para todo el sistema:**
 
-Tres páginas estáticas servidas desde `public/`:
+- **Clase realizada** = `es_suspension = false`. **Clase registrada** = todas.
+- Alumnos, promedios y distribución por sexo se calculan **sólo sobre clases
+  realizadas**.
+- Los porcentajes se calculan en SQL, redondeados a un decimal, y valen `0`
+  cuando el denominador es 0. Nunca `null`, `NaN` ni división por cero.
+- `estadisticas_por_lugar` incluye `ultima_clase` (`max(fecha)` de realizadas):
+  es el indicador de "nivel de actividad de cada espacio".
+- `estadisticas_suspensiones.detalle` trae las observaciones, que es donde el
+  profesor escribe el motivo concreto. Máximo 200 filas, más recientes primero.
+- `estadisticas_evolucion` devuelve la serie en orden cronológico ascendente.
+  Un período sin clases no se inventa.
 
-- `index.html` — ingreso (usuario y contraseña) y cambio de contraseña obligatorio la primera vez.
-- `carga.html` — formulario de carga de la clase. Es la pantalla del profesor.
-- `admin.html` — panel: tablero de indicadores, listado con filtros, edición, historial y gestión.
+Cobertura de los indicadores pedidos: clases realizadas · alumnos registrados ·
+alumnos nuevos · distribución por sexo · clases por profesor · alumnos por
+profesor · alumnos por lugar · promedio por clase · evolución de la matrícula ·
+cantidad y porcentaje de suspendidas · motivos de suspensión · nivel de
+actividad de cada espacio · evolución de la participación por período.
 
-Todas usan `public/js/api.js` (cliente HTTP compartido) y `public/css/estilos.css`.
-Sin framework ni paso de build. Los gráficos, con Chart.js desde CDN.
+## `/api/admin` — sólo rol `admin`
+
+| método | ruta | |
+|---|---|---|
+| GET | `/api/admin/usuarios` | todos, incluidos inactivos |
+| POST | `/api/admin/usuarios` | alta `{nombre, cargo, email, rol, dicta_clases}` — crea el usuario en Supabase Auth con `clienteAdministrador()` y contraseña generada, que se devuelve **una sola vez** |
+| PATCH | `/api/admin/usuarios/[id]` | `{nombre, cargo, rol, dicta_clases, activo}` |
+| POST | `/api/admin/usuarios/[id]/password` | reset; devuelve la nueva contraseña una sola vez y deja `debe_cambiar_password = true` |
+| GET | `/api/admin/lugares` | todos, incluidos inactivos |
+| POST | `/api/admin/lugares` | alta `{nombre, descripcion, orden}` |
+| PATCH | `/api/admin/lugares/[id]` | `{nombre, descripcion, activo, orden}` |
+| GET | `/api/admin/historial` | auditoría global paginada; filtros `registro_id`, `usuario_id`, `desde`, `hasta`, `pagina`, `por_pagina` |
+
+Reglas: un admin no puede desactivarse ni quitarse el rol a sí mismo, y no se
+puede dejar el sistema sin ningún admin activo. **Nada se elimina**: usuarios y
+lugares se desactivan, para no romper el histórico del REQ 5. Al desactivar un
+lugar o profesor con registros, se permite pero la respuesta informa cuántos
+registros quedan asociados.
+
+## Pantallas
+
+| ruta | quién | qué |
+|---|---|---|
+| `/ingresar` | pública | correo y contraseña; cambio obligatorio la primera vez |
+| `/` | con sesión | redirige: admin → `/panel`, profesor → `/carga` |
+| `/carga` | profesor y admin | formulario de carga de la clase |
+| `/panel` | con sesión | tablero, registros y gestión (gestión sólo admin) |
+
+Server Components para lo que se puede resolver en el servidor; `'use client'`
+sólo donde hace falta interacción. Los gráficos, con el componente `chart` de
+shadcn (recharts), que ya está en `components/ui/chart.tsx`.

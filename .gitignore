@@ -1,7 +1,35 @@
-node_modules/
-data/*.db
-data/*.db-journal
-data/*.db-wal
-data/*.db-shm
+# dependencias
+/node_modules
+/.pnp
+.pnp.*
+
+# next.js
+/.next/
+/out/
+/build
+next-env.d.ts
+*.tsbuildinfo
+
+# variables de entorno — NUNCA subir las claves de Supabase
 .env
+.env.local
+.env*.local
+!.env.example
+
+# vercel
+.vercel
+
+# supabase (cli local)
+/supabase/.temp
+/supabase/.branches
+
+# base sqlite del prototipo anterior
+data/*.db
+data/*.db-*
+
+# varios
+.DS_Store
+*.pem
 *.log
+npm-debug.log*
+/coverage

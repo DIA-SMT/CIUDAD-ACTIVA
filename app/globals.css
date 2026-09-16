@@ -1,0 +1,175 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ==========================================================================
+   Ciudad Activa — identidad
+   Programa de gimnasia y actividad física gratuita en plazas y parques de
+   San Miguel de Tucumán. El verde es el del programa; el naranja marca lo que
+   crece (alumnos nuevos) y el rojo lo que no se hizo (clases suspendidas).
+   ========================================================================== */
+
+:root {
+  /* Paleta institucional */
+  --verde-900: oklch(0.3231 0.0584 168.33);
+  --verde-700: oklch(0.4626 0.0870 167.68);
+  --verde-600: oklch(0.5328 0.1023 166.23);
+  --verde-500: oklch(0.6384 0.1240 165.91);
+  --verde-100: oklch(0.9241 0.0268 166.74);
+  --verde-50:  oklch(0.9713 0.0109 167.80);
+
+  --naranja-600:  oklch(0.5804 0.1550 44.40);
+  --rojo-600:     oklch(0.5003 0.1821 29.51);
+  --ambar-600:    oklch(0.5394 0.1562 42.99);
+  --azul-600:     oklch(0.5093 0.1955 260.89);
+  --violeta-600:  oklch(0.4980 0.1953 291.50);
+  --turquesa-600: oklch(0.5198 0.0936 223.13);
+
+  /* Tokens de shadcn */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.205 0.012 168);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+
+  --primary: var(--verde-700);
+  --primary-foreground: oklch(0.99 0.005 168);
+  --secondary: var(--verde-50);
+  --secondary-foreground: var(--verde-900);
+  --muted: oklch(0.968 0.004 168);
+  --muted-foreground: oklch(0.505 0.015 168);
+  --accent: var(--verde-100);
+  --accent-foreground: var(--verde-900);
+  --destructive: var(--rojo-600);
+
+  --border: oklch(0.912 0.006 168);
+  --input: oklch(0.912 0.006 168);
+  --ring: var(--verde-600);
+
+  /* Series de gráficos: distinguibles también en escala de grises y para
+     quien no diferencia rojo de verde. */
+  --chart-1: var(--verde-600);
+  --chart-2: var(--azul-600);
+  --chart-3: var(--naranja-600);
+  --chart-4: var(--violeta-600);
+  --chart-5: var(--turquesa-600);
+
+  --radius: 0.625rem;
+
+  --sidebar: var(--verde-50);
+  --sidebar-foreground: var(--verde-900);
+  --sidebar-primary: var(--verde-700);
+  --sidebar-primary-foreground: oklch(0.99 0.005 168);
+  --sidebar-accent: var(--verde-100);
+  --sidebar-accent-foreground: var(--verde-900);
+  --sidebar-border: oklch(0.9 0.012 168);
+  --sidebar-ring: var(--verde-600);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-heading: var(--font-geist-sans);
+
+  --color-verde-900: var(--verde-900);
+  --color-verde-700: var(--verde-700);
+  --color-verde-600: var(--verde-600);
+  --color-verde-500: var(--verde-500);
+  --color-verde-100: var(--verde-100);
+  --color-verde-50: var(--verde-50);
+  --color-naranja-600: var(--naranja-600);
+  --color-rojo-600: var(--rojo-600);
+  --color-ambar-600: var(--ambar-600);
+  --color-azul-600: var(--azul-600);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+
+  /* Las cifras se leen en columna en las tablas de indicadores. */
+  .cifra {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  /* El profesor carga desde el celular: en iOS, un input de menos de 16px
+     hace que el navegador acerque la pantalla al enfocarlo. */
+  @media (max-width: 640px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* El panel se imprime para llevarlo a reunión: sin controles ni navegación. */
+@media print {
+  .no-imprimir {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
+  table {
+    border-collapse: collapse;
+  }
+  th,
+  td {
+    border: 1px solid #999;
+  }
+}
