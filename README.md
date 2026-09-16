@@ -174,6 +174,40 @@ donde están los datos y RLS sigue aplicando, porque son `security invoker`.
 
 ---
 
+## Despliegue
+
+El proyecto es una aplicación Next.js estándar: cualquier plataforma que soporte
+Next 16 lo corre sin cambios. Lo único que necesita es el archivo de variables
+de entorno de la sección anterior.
+
+**Antes de desplegar**, poné `NEXT_PUBLIC_SITIO_URL` con la URL real. La usa
+OpenRouter para atribuir el consumo del asistente.
+
+### Sobre Vercel y el plan Hobby
+
+El plan gratuito de Vercel valida dos cosas en cada despliegue:
+
+1. Que el correo del commit corresponda a una cuenta de GitHub.
+2. Que esa cuenta tenga acceso al proyecto **en Vercel**.
+
+En un repositorio privado de una organización, eso significa que **sólo puede
+desplegar quien sea dueño de la cuenta de Vercel**: el plan Hobby no permite
+agregar miembros al equipo. Si el commit lo firma otra persona, el despliegue se
+bloquea aunque tenga permisos sobre el repositorio de GitHub.
+
+Además, los términos del plan Hobby lo reservan para proyectos personales y no
+comerciales. Para un sistema municipal en producción hace falta resolver el
+alojamiento de otra forma: el plan Pro de Vercel, una plataforma cuyo plan
+gratuito admita equipos, o un servidor del municipio.
+
+Quien despliegue tiene que configurar su git con el correo de esa cuenta:
+
+```bash
+git config user.email "el-correo-de-la-cuenta-que-despliega"
+```
+
+---
+
 ## Carga masiva desde la planilla
 
 `supabase/datos-planilla.json` tiene los **559 registros** de la planilla, extraídos
