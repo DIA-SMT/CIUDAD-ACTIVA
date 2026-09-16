@@ -5,12 +5,13 @@ import { NextResponse, type NextRequest } from 'next/server';
 const PUBLICAS = ['/ingresar', '/auth'];
 
 /**
- * Corre en cada pedido. Hace dos cosas:
+ * Corre en cada pedido (en Next 16 esto es proxy.ts; antes era middleware.ts).
+ * Hace dos cosas:
  *  1. Refresca el token de Supabase y reescribe las cookies, para que la
  *     sesion no se caiga sola mientras el profesor completa el formulario.
  *  2. Manda al ingreso a quien no tenga sesion.
  */
-export async function middleware(pedido: NextRequest) {
+export default async function proxy(pedido: NextRequest) {
   let respuesta = NextResponse.next({ request: pedido });
 
   const supabase = createServerClient(
