@@ -57,7 +57,7 @@ export async function GET(pedido: Request) {
 
   for (let inicio = 0; inicio < TOPE; inicio += LOTE) {
     const { data, error: fallo } = await aplicarFiltros(
-      supabase.from('v_registros').select('*'),
+      supabase.from('v_revision').select('*'),
       filtros,
     )
       .order(orden.columna, { ascending: orden.asc })

@@ -27,6 +27,10 @@ export function useFiltros() {
     const lugar = sp.get('lugar_id');
     const estado = sp.get('estado');
     const q = sp.get('q');
+    const aprobacion = sp.get('aprobacion');
+    if (aprobacion === 'pendiente' || aprobacion === 'aprobado' || aprobacion === 'rechazado') {
+      f.aprobacion = aprobacion;
+    }
     if (desde) f.desde = desde;
     if (hasta) f.hasta = hasta;
     if (profesor) f.profesor_id = profesor;
@@ -50,7 +54,9 @@ export function useFiltros() {
 
   const limpiar = useCallback(() => {
     const p = new URLSearchParams(sp.toString());
-    for (const c of ['desde', 'hasta', 'profesor_id', 'lugar_id', 'estado', 'q']) p.delete(c);
+    for (const c of ['desde', 'hasta', 'profesor_id', 'lugar_id', 'estado', 'q', 'aprobacion']) {
+      p.delete(c);
+    }
     router.replace(`${ruta}?${p.toString()}`, { scroll: false });
   }, [router, ruta, sp]);
 
@@ -79,7 +85,7 @@ export function BarraFiltros({ catalogos }: { catalogos: Catalogos }) {
 
   return (
     <div className="bg-card no-imprimir rounded-xl border p-4">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
         <div className="space-y-1.5">
           <Label htmlFor="f-desde" className="text-xs">Desde</Label>
           <Input
@@ -161,6 +167,29 @@ export function BarraFiltros({ catalogos }: { catalogos: Catalogos }) {
               {catalogos.estados.map((e) => (
                 <SelectItem key={e.codigo} value={e.codigo}>{e.nombre}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="f-aprobacion" className="text-xs">Revisión</Label>
+          <Select
+            value={filtros.aprobacion ?? 'todos'}
+            onValueChange={(v) => aplicar({ aprobacion: v ?? 'todos' })}
+          >
+            <SelectTrigger id="f-aprobacion" className="w-full">
+              <SelectValue>
+                {(v: string | null) =>
+                  ({ pendiente: 'Pendientes', aprobado: 'Aprobadas', rechazado: 'Rechazadas' })[
+                    String(v)
+                  ] ?? 'Todas'}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todas</SelectItem>
+              <SelectItem value="pendiente">Pendientes</SelectItem>
+              <SelectItem value="aprobado">Aprobadas</SelectItem>
+              <SelectItem value="rechazado">Rechazadas</SelectItem>
             </SelectContent>
           </Select>
         </div>

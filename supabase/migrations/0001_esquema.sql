@@ -129,7 +129,7 @@ create table public.parametros (
 
 insert into public.parametros (clave, valor, descripcion) values
   ('ventana_edicion_dias', '7',
-   'Dias que tiene un profesor para corregir su propia carga. El admin no tiene limite.');
+   'Cuántos días tiene un profesor para corregir una carga propia. Se cuenta desde la fecha de la clase. La Dirección no tiene límite.');
 
 -- ============================================================================
 --  Funciones de apoyo

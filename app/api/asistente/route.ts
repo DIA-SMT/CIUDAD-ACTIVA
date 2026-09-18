@@ -54,6 +54,10 @@ alumnos hubo, cuántos varones y mujeres, cuántos eran nuevos, el estado de la 
 observaciones que escribió el profesor.
 
 Definiciones que tenés que respetar, son las mismas que usa el tablero:
+- Sólo entran las clases APROBADAS por la Dirección. Una carga que todavía
+  espera revisión, o que fue rechazada, no está en ningún número que consultes.
+  Si te preguntan por algo muy reciente y aparece poco o nada, puede ser que
+  esté esperando aprobación: decilo como posible explicación.
 - "Clase realizada" es la que no está suspendida. "Clase registrada" son todas.
 - Los alumnos, los promedios y la distribución por sexo se cuentan sólo sobre las realizadas.
 - "Alumnos" es la suma de asistentes por clase, no personas distintas: alguien que va a

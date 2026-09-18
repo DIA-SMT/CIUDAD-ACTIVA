@@ -16,6 +16,7 @@ import type {
   Lugar,
   ProfesorOpcion,
   Registro,
+  RegistroRevision,
 } from '@/lib/tipos';
 
 type Cliente = Awaited<ReturnType<typeof clienteServidor>>;
@@ -84,7 +85,7 @@ async function ventanaEdicionDias(supabase: Cliente): Promise<number> {
 }
 
 const leerRegistro = async (supabase: Cliente, id: number) =>
-  supabase.from('v_registros').select('*').eq('id', id).maybeSingle<Registro>();
+  supabase.from('v_revision').select('*').eq('id', id).maybeSingle<RegistroRevision>();
 
 const NO_ESTA =
   'No encontramos el registro que buscás. Puede que ya se haya eliminado.';
@@ -189,7 +190,7 @@ export async function PATCH(pedido: Request, { params }: Contexto) {
   // existir ya se confirmo en su momento y no hay que volver a preguntar.
   if (moviaLaClave && !esVerdadero(cuerpo.confirmar_duplicado)) {
     const { data: duplicados, error: falloDup } = await supabase
-      .from('v_registros')
+      .from('v_revision')
       .select('*')
       .eq('fecha', datos.fecha)
       .eq('profesor_id', datos.profesor_id)

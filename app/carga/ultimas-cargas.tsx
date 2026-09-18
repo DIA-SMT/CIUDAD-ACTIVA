@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { diasEntre, fmt, hoyISO } from '@/lib/fechas';
 import { traerJSON, useRecurso } from '@/lib/usar-recurso';
-import type { Pagina, Perfil, Registro } from '@/lib/tipos';
+import { InsigniaAprobacion } from '@/components/insignia-aprobacion';
+import type { Pagina, Perfil, Registro, RegistroRevision } from '@/lib/tipos';
 
 /** Debe coincidir con parametros.ventana_edicion_dias de la base. */
 const VENTANA_DIAS = 7;
@@ -27,14 +28,15 @@ export function UltimasCargas({
   // `recargar` entra en la clave para volver a pedir despues de cada guardado.
   const { datos, error, refrescar } = useRecurso(
     `${ruta}#${recargar}`,
-    () => traerJSON<Pagina<Registro>>(ruta),
+    () => traerJSON<Pagina<RegistroRevision>>(ruta),
   );
   const registros = datos?.datos ?? null;
 
   useEffect(() => { refrescar(); }, [recargar, refrescar]);
 
-  const editable = (r: Registro) =>
-    perfil.rol === 'admin' || diasEntre(r.fecha, hoyISO()) <= VENTANA_DIAS;
+  const editable = (r: RegistroRevision) =>
+    r.aprobacion !== 'rechazado' &&
+    (perfil.rol === 'admin' || diasEntre(r.fecha, hoyISO()) <= VENTANA_DIAS);
 
   if (registros === null) {
     return (
@@ -61,9 +63,12 @@ export function UltimasCargas({
       {registros.map((r) => (
         <li key={r.id} className="flex items-center gap-3 py-3">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">
-              {fmt.fecha(r.fecha)} · {r.lugar_nombre}
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="truncate text-sm font-medium">
+                {fmt.fecha(r.fecha)} · {r.lugar_nombre}
+              </p>
+              <InsigniaAprobacion estado={r.aprobacion} />
+            </div>
             <p className="text-muted-foreground text-xs">
               {r.es_suspension ? (
                 <Badge variant="destructive" className="mr-1">
@@ -85,6 +90,16 @@ export function UltimasCargas({
                 </>
               )}
             </p>
+            {r.aprobacion === 'rechazado' && r.motivo_rechazo && (
+              <p className="text-rojo-600 mt-1 text-xs">
+                Rechazada: {r.motivo_rechazo}
+              </p>
+            )}
+            {r.aprobacion === 'pendiente' && (
+              <p className="text-muted-foreground mt-1 text-xs">
+                Esperando que la Dirección la revise. Todavía no cuenta en las estadísticas.
+              </p>
+            )}
           </div>
 
           {editable(r) ? (

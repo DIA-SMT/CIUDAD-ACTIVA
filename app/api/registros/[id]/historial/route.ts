@@ -43,7 +43,7 @@ export async function GET(pedido: Request, { params }: Contexto) {
   // asientos es la unica senal de que ese id no existio nunca.
   if (!filas || filas.length === 0) {
     const { data: registro, error: falloRegistro } = await supabase
-      .from('v_registros')
+      .from('v_revision')
       .select('id')
       .eq('id', n)
       .maybeSingle<{ id: number }>();

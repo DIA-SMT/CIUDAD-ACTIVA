@@ -48,10 +48,19 @@ export function filtrosDeQuery(sp: URLSearchParams): Filtros {
   const q = sp.get('q')?.trim();
   if (q) f.q = q.slice(0, 120);
 
+  const aprobacion = sp.get('aprobacion');
+  if (aprobacion === 'pendiente' || aprobacion === 'aprobado' || aprobacion === 'rechazado') {
+    f.aprobacion = aprobacion;
+  }
+
   return f;
 }
 
-/** Parámetros con los que se llaman las funciones SQL de estadísticas. */
+/**
+ * Parámetros con los que se llaman las funciones SQL de estadísticas.
+ * `aprobacion` no va: los indicadores cuentan siempre y sólo lo aprobado, y
+ * eso lo decide fn_registros_filtrados en la base, no quien consulta.
+ */
 export function parametrosRPC(f: Filtros) {
   return {
     p_desde: f.desde ?? null,
@@ -76,6 +85,7 @@ export function aplicarFiltros<T extends { [k: string]: any }>(consulta: T, f: F
   if (f.profesor_id) c = c.eq('profesor_id', f.profesor_id);
   if (f.lugar_id) c = c.eq('lugar_id', f.lugar_id);
   if (f.estado) c = c.eq('estado_codigo', f.estado);
+  if (f.aprobacion) c = c.eq('aprobacion', f.aprobacion);
   if (f.q) {
     // Las comas y los paréntesis rompen la sintaxis de .or() de PostgREST.
     const t = f.q.replace(/[,()]/g, ' ').trim();

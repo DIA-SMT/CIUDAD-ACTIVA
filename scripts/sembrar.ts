@@ -620,6 +620,9 @@ async function sembrarRegistros(
       email_responsable: email,
       cargado_por: quienCargo.id,
       origen: 'importacion',
+      // Historico del circuito anterior: entra aprobado. La revision aplica a
+      // lo que se cargue en el sistema de acá en adelante.
+      aprobacion: 'aprobado',
       // Cuando se reporto la clase, no cuando se corrio esta importacion. Sin
       // esto los 966 registros historicos quedarian todos con el mismo sello y
       // se perderia el desfasaje entre dar la clase y cargarla.

@@ -41,10 +41,20 @@ function revisarPassword(p: string): string[] {
   return faltas;
 }
 
-/** Sólo rutas internas: un ?volver=https://... sería un redirect abierto. */
-function destinoSeguro(volver: string | null, rol: string): string {
+/**
+ * A dónde va después de entrar.
+ *
+ * Sin un ?volver válido manda a la raíz, que es un Server Component y decide
+ * según el rol leyéndolo de `perfiles`. Antes esto miraba el rol del
+ * user_metadata de Auth, que es una segunda copia: al cambiarle el rol a
+ * alguien desde Gestión quedaba desactualizada y la persona entraba como admin
+ * pero caía en el formulario de carga. Una sola fuente de verdad.
+ *
+ * Sólo rutas internas: un ?volver=https://... sería un redirect abierto.
+ */
+function destinoSeguro(volver: string | null): string {
   if (volver && volver.startsWith('/') && !volver.startsWith('//')) return volver;
-  return rol === 'admin' ? '/panel' : '/carga';
+  return '/';
 }
 
 type Paso = 'ingreso' | 'cambio';
@@ -60,7 +70,6 @@ export function FormularioIngreso() {
   const [verPassword, setVerPassword] = useState(false);
   const [nueva, setNueva] = useState('');
   const [repetida, setRepetida] = useState('');
-  const [rol, setRol] = useState('profesor');
   const [aviso, setAviso] = useState<string | null>(
     parametros.get('vencida') ? 'Tu sesión expiró. Volvé a ingresar.' : null,
   );
@@ -90,18 +99,16 @@ export function FormularioIngreso() {
       return;
     }
 
-    const rolUsuario = String(data.user?.user_metadata?.rol ?? 'profesor');
-    setRol(rolUsuario);
-
     // La primera vez no se entra de largo: hay que cambiar la contraseña que
-    // asigno el administrador, que es la misma para todos.
+    // asignó el administrador, que es la misma para todos. Esto sí vive en el
+    // metadata de Auth, porque es una propiedad de la credencial.
     if (data.user?.user_metadata?.debe_cambiar_password) {
       setPaso('cambio');
       setCargando(false);
       return;
     }
 
-    router.replace(destinoSeguro(parametros.get('volver'), rolUsuario));
+    router.replace(destinoSeguro(parametros.get('volver')));
   }
 
   async function cambiar(evento: React.FormEvent) {
@@ -130,7 +137,7 @@ export function FormularioIngreso() {
       return;
     }
 
-    router.replace(destinoSeguro(parametros.get('volver'), rol));
+    router.replace(destinoSeguro(parametros.get('volver')));
   }
 
   const faltas = nueva ? revisarPassword(nueva) : [];

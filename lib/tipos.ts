@@ -1,6 +1,8 @@
 // Tipos del dominio. Espejan las tablas de supabase/migrations/0001_esquema.sql.
 
 export type Rol = 'profesor' | 'admin';
+/** Estado de revisión de una carga. Sólo lo aprobado entra en los indicadores. */
+export type Aprobacion = 'pendiente' | 'aprobado' | 'rechazado';
 export type Origen = 'web' | 'importacion';
 export type AccionHistorial = 'creacion' | 'modificacion' | 'eliminacion';
 export type Agrupacion = 'dia' | 'semana' | 'mes';
@@ -47,7 +49,13 @@ export interface Catalogos {
   estados: Pick<EstadoClase, 'codigo' | 'nombre' | 'es_suspension'>[];
 }
 
-/** Fila de la vista v_registros. */
+/**
+ * Fila de la vista v_registros.
+ *
+ * No trae el estado de aprobación: esa vista es la que consumen las funciones
+ * de indicadores, que ya filtran por aprobado. Para ver o revisar el estado se
+ * usa RegistroRevision, que sale de v_revision.
+ */
 export interface Registro {
   id: number;
   fecha: string;
@@ -74,6 +82,15 @@ export interface Registro {
   mes: number;
   periodo: string;
   semana: string;
+}
+
+/** Fila de v_revision: lo mismo más el estado de aprobación. */
+export interface RegistroRevision extends Registro {
+  aprobacion: Aprobacion;
+  revisado_por: string | null;
+  revisado_por_nombre: string | null;
+  revisado_en: string | null;
+  motivo_rechazo: string;
 }
 
 /** Lo que manda el formulario de carga. */
@@ -112,6 +129,11 @@ export interface Filtros {
   lugar_id?: number;
   estado?: string;
   q?: string;
+  /**
+   * Filtra el listado por estado de revisión. No viaja a las funciones de
+   * indicadores: esas cuentan siempre y sólo lo aprobado.
+   */
+  aprobacion?: Aprobacion;
 }
 
 export interface Pagina<T> {
@@ -123,6 +145,11 @@ export interface Pagina<T> {
 }
 
 // --- REQ 7: indicadores -----------------------------------------------------
+
+/** Lo que el tablero necesita saber de la cola de revisión. */
+export interface EstadoRevision {
+  pendientes: number;
+}
 
 export interface Resumen {
   clases_registradas: number;

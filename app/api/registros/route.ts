@@ -1,6 +1,6 @@
 // REQ 1, 5 y 8: alta de una actividad y listado historico consultable.
 //
-// Todo lo que se devuelve sale de la vista v_registros filtrada con
+// Todo lo que se devuelve sale de la vista v_revision filtrada con
 // filtrosDeQuery() + aplicarFiltros(), que son las mismas funciones que usan los
 // indicadores del REQ 7: asi el listado y el tablero nunca pueden mirar
 // subconjuntos distintos.
@@ -108,7 +108,7 @@ export async function GET(pedido: Request) {
   });
 
   const { data, count, error: fallo } = await aplicarFiltros(
-    supabase.from('v_registros').select('*', { count: 'exact' }),
+    supabase.from('v_revision').select('*', { count: 'exact' }),
     filtros,
   )
     .order(orden.columna, { ascending: orden.asc })
@@ -125,7 +125,7 @@ export async function GET(pedido: Request) {
     // que la pantalla pueda volver a una pagina que exista.
     if (fallo.code === 'PGRST103') {
       const { count: totalReal } = await aplicarFiltros(
-        supabase.from('v_registros').select('*', { count: 'exact', head: true }),
+        supabase.from('v_revision').select('*', { count: 'exact', head: true }),
         filtros,
       );
       return Response.json(armarPagina([], totalReal ?? 0));
@@ -183,7 +183,7 @@ export async function POST(pedido: Request) {
   // por eso el duplicado se avisa y se confirma, no se bloquea.
   if (!esVerdadero(cuerpo.confirmar_duplicado)) {
     const { data: duplicados, error: falloDup } = await supabase
-      .from('v_registros')
+      .from('v_revision')
       .select('*')
       .eq('fecha', datos.fecha)
       .eq('profesor_id', datos.profesor_id)
@@ -220,7 +220,7 @@ export async function POST(pedido: Request) {
   // asentara tambien desde aca, cada alta quedaria duplicada en la auditoria.
 
   const { data: registro, error: falloLectura } = await supabase
-    .from('v_registros')
+    .from('v_revision')
     .select('*')
     .eq('id', alta.id)
     .maybeSingle<Registro>();

@@ -20,8 +20,9 @@ import {
 import { FormularioCarga } from '@/app/carga/formulario-carga';
 import { fmt } from '@/lib/fechas';
 import { traerJSON, useRecurso } from '@/lib/usar-recurso';
+import { InsigniaAprobacion } from '@/components/insignia-aprobacion';
 import type {
-  Catalogos, EntradaHistorial, Pagina, Perfil, Registro,
+  Catalogos, EntradaHistorial, Pagina, Perfil, RegistroRevision,
 } from '@/lib/tipos';
 import { useFiltros } from './filtros';
 
@@ -30,9 +31,12 @@ const POR_PAGINA = 25;
 export function Registros({
   perfil,
   catalogos,
+  version = 0,
 }: {
   perfil: Perfil;
   catalogos: Catalogos;
+  /** Cambia al aprobar o rechazar: obliga a releer el listado. */
+  version?: number;
 }) {
   const { consulta } = useFiltros();
   const esAdmin = perfil.rol === 'admin';
@@ -41,19 +45,19 @@ export function Registros({
   const pagina = posicion.clave === consulta ? posicion.pagina : 1;
   const setPagina = (n: number) => setPosicion({ clave: consulta, pagina: n });
 
-  const [verDetalle, setVerDetalle] = useState<Registro | null>(null);
+  const [verDetalle, setVerDetalle] = useState<RegistroRevision | null>(null);
   const [historial, setHistorial] = useState<EntradaHistorial[] | null>(null);
-  const [editando, setEditando] = useState<Registro | null>(null);
-  const [borrando, setBorrando] = useState<Registro | null>(null);
+  const [editando, setEditando] = useState<RegistroRevision | null>(null);
+  const [borrando, setBorrando] = useState<RegistroRevision | null>(null);
   const [trabajando, setTrabajando] = useState(false);
 
   const ruta = `/api/registros?${consulta}&pagina=${pagina}&por_pagina=${POR_PAGINA}`;
   const { datos, error, refrescar: traer } = useRecurso(
-    ruta,
-    () => traerJSON<Pagina<Registro>>(ruta),
+    `${ruta}#${version}`,
+    () => traerJSON<Pagina<RegistroRevision>>(ruta),
   );
 
-  async function abrirDetalle(r: Registro) {
+  async function abrirDetalle(r: RegistroRevision) {
     setVerDetalle(r);
     setHistorial(null);
     try {
@@ -133,6 +137,7 @@ export function Registros({
                 <TableHead>Profesor</TableHead>
                 <TableHead>Lugar</TableHead>
                 <TableHead>Estado</TableHead>
+                <TableHead>Revisión</TableHead>
                 <TableHead className="text-right">Alumnos</TableHead>
                 <TableHead className="text-right">V / M</TableHead>
                 <TableHead className="text-right">Nuevos</TableHead>
@@ -151,6 +156,9 @@ export function Registros({
                     <Badge variant={r.es_suspension ? 'destructive' : 'secondary'}>
                       {r.estado_nombre}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <InsigniaAprobacion estado={r.aprobacion} />
                   </TableCell>
                   <TableCell className="cifra text-right">
                     {fmt.numero(r.alumnos_total)}
@@ -246,6 +254,8 @@ export function Registros({
                     ['Mujeres', fmt.numero(verDetalle.mujeres)],
                     ['Alumnos nuevos', fmt.numero(verDetalle.alumnos_nuevos)],
                     ['Origen', verDetalle.origen === 'web' ? 'Cargado en el sistema' : 'Importado de la planilla'],
+                    ['Revisión', verDetalle.aprobacion === 'aprobado' ? 'Aprobada'
+                      : verDetalle.aprobacion === 'rechazado' ? 'Rechazada' : 'Esperando revisión'],
                   ].map(([k, v]) => (
                     <div key={k}>
                       <dt className="text-muted-foreground text-xs">{k}</dt>

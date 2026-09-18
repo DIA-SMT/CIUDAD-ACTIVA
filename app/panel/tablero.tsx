@@ -112,12 +112,14 @@ function Ordenable({
   );
 }
 
-export function Tablero() {
+export function Tablero({ version = 0 }: { version?: number }) {
   const { consulta } = useFiltros();
   const [agrupar, setAgrupar] = useState<Agrupacion>('mes');
 
   const ruta = `/api/estadisticas/tablero?${consulta}&agrupar=${agrupar}`;
-  const { datos, error } = useRecurso(ruta, () => traerJSON<DatosTablero>(ruta));
+  // version entra en la clave: al aprobar o rechazar algo, los indicadores
+  // cambian y hay que volver a pedirlos.
+  const { datos, error } = useRecurso(`${ruta}#${version}`, () => traerJSON<DatosTablero>(ruta));
 
   const lugares = useOrden<FilaLugar>('alumnos');
   const profesores = useOrden<FilaProfesor>('alumnos');
