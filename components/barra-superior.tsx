@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { BarChart3, ClipboardList, LogOut } from 'lucide-react';
+import { BarChart3, ClipboardList, KeyRound, LogOut } from 'lucide-react';
 
 import { Button, buttonVariants } from '@/components/ui/button';
+import { DialogoPassword } from '@/components/dialogo-password';
 import { Marca } from '@/components/marca';
 import { clienteNavegador } from '@/lib/supabase/navegador';
 import type { Perfil } from '@/lib/tipos';
@@ -19,6 +20,7 @@ export function BarraSuperior({
 }) {
   const router = useRouter();
   const [saliendo, setSaliendo] = useState(false);
+  const [cambiandoPassword, setCambiandoPassword] = useState(false);
 
   async function salir() {
     setSaliendo(true);
@@ -65,6 +67,16 @@ export function BarraSuperior({
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => setCambiandoPassword(true)}
+            aria-label="Cambiar mi contraseña"
+          >
+            <KeyRound className="h-4 w-4" aria-hidden />
+            <span className="hidden sm:inline">Contraseña</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={salir}
             disabled={saliendo}
             aria-label="Cerrar sesión"
@@ -74,6 +86,11 @@ export function BarraSuperior({
           </Button>
         </nav>
       </div>
+
+      {/* Se monta al abrirlo, así cada vez arranca con los campos vacíos. */}
+      {cambiandoPassword && (
+        <DialogoPassword email={perfil.email} onCerrar={() => setCambiandoPassword(false)} />
+      )}
     </header>
   );
 }

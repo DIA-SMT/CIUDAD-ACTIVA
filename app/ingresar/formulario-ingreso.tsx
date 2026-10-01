@@ -8,38 +8,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { REGLAS_PASSWORD, revisarPassword, traducirErrorAuth } from '@/lib/contrasenas';
 import { clienteNavegador } from '@/lib/supabase/navegador';
-
-/** Supabase contesta en ingles; el profesor no tiene por que leer eso. */
-function traducir(mensaje: string): string {
-  const m = mensaje.toLowerCase();
-  if (m.includes('invalid login credentials')) {
-    return 'El correo o la contraseña no son correctos.';
-  }
-  if (m.includes('email not confirmed')) {
-    return 'Tu cuenta todavía no está confirmada. Avisale al administrador del sistema.';
-  }
-  if (m.includes('too many requests') || m.includes('rate limit')) {
-    return 'Demasiados intentos seguidos. Esperá un momento y volvé a probar.';
-  }
-  if (m.includes('user not found')) return 'El correo o la contraseña no son correctos.';
-  if (m.includes('failed to fetch') || m.includes('network')) {
-    return 'No se pudo conectar. Revisá tu conexión a internet.';
-  }
-  if (m.includes('should be different')) {
-    return 'La contraseña nueva tiene que ser distinta de la actual.';
-  }
-  return mensaje;
-}
-
-/** Mismas reglas que pide el sistema en el cambio obligatorio. */
-function revisarPassword(p: string): string[] {
-  const faltas: string[] = [];
-  if (p.length < 8) faltas.push('al menos 8 caracteres');
-  if (!/[a-zA-Z]/.test(p)) faltas.push('al menos una letra');
-  if (!/[0-9]/.test(p)) faltas.push('al menos un número');
-  return faltas;
-}
 
 /**
  * A dónde va después de entrar.
@@ -94,7 +64,7 @@ export function FormularioIngreso() {
     });
 
     if (fallo) {
-      setError(traducir(fallo.message));
+      setError(traducirErrorAuth(fallo.message));
       setCargando(false);
       return;
     }
@@ -132,7 +102,7 @@ export function FormularioIngreso() {
     });
 
     if (fallo) {
-      setError(traducir(fallo.message));
+      setError(traducirErrorAuth(fallo.message));
       setCargando(false);
       return;
     }
@@ -171,7 +141,7 @@ export function FormularioIngreso() {
           />
           <p id="reglas" className="text-muted-foreground text-xs">
             {nueva.length === 0
-              ? 'Al menos 8 caracteres, con una letra y un número.'
+              ? REGLAS_PASSWORD
               : faltas.length > 0
                 ? `Le falta: ${faltas.join(', ')}.`
                 : 'Cumple con lo pedido.'}
