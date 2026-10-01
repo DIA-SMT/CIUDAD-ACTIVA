@@ -72,7 +72,9 @@ administradora (`deportes@smt.gob.ar`).
 
 **Los profesores entran con su correo electrónico**, que es el que trae la
 planilla. La contraseña inicial es la de `PASSWORD_INICIAL` y el sistema obliga a
-cambiarla en el primer ingreso.
+cambiarla en el primer ingreso. Después, cada persona la puede cambiar cuando
+quiera con el botón **Contraseña** de la barra superior, que pide la actual antes
+de aceptar la nueva.
 
 ---
 
